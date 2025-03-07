@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WinExe won't open console window on startup, but we *do* want that for Debug builds, so configure those to be just an Exe -->
+    <OutputType>WinExe</OutputType>
+    <OutputType Condition=" '$(Configuration)' == 'Debug' ">Exe</OutputType>
+
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CurrentYear>$([System.DateTime]::Now.ToString("yyyy"))</CurrentYear>
+    <CurrentDate>$([System.DateTime]::Now.ToString('yyyyMMddHHmm'))</CurrentDate>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionSuffix>alpha.$(CurrentDate)</VersionSuffix>
+    <Title>FamiSharp</Title>
+    <Product>FamiSharp</Product>
+    <Description>NES/Famicom emulator.</Description>
+    <Authors>xdaniel</Authors>
+    <Copyright>Written 2024-$(CurrentYear) by xdaniel</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" Version="2.2.6" />
+    <PackageReference Include="Hexa.NET.ImGui.Backends" Version="1.0.14" />
+    <PackageReference Include="Hexa.NET.ImGui.Backends.SDL2" Version="1.0.14" />
+    <PackageReference Include="Hexa.NET.OpenGL3" Version="1.1.0" />
+    <PackageReference Include="Hexa.NET.SDL2" Version="1.2.13" />
+    <PackageReference Include="Hexa.NET.Utilities" Version="2.2.1" />
+    <PackageReference Include="NativeFileDialogNET" Version="2.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\2C02G_wiki.pal">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
