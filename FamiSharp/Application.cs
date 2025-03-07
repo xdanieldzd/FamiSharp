@@ -200,11 +200,11 @@ namespace FamiSharp
 					break;
 
 				case (uint)SDLEventType.Keydown:
-					OnKeyDown(new KeycodeEventArgs((SDLKeyCode)e.Key.Keysym.Sym));
+					OnKeyDown(new KeycodeEventArgs((SDLKeyCode)e.Key.Keysym.Sym, (SDLKeymod)e.Key.Keysym.Mod));
 					break;
 
 				case (uint)SDLEventType.Keyup:
-					OnKeyUp(new KeycodeEventArgs((SDLKeyCode)e.Key.Keysym.Sym));
+					OnKeyUp(new KeycodeEventArgs((SDLKeyCode)e.Key.Keysym.Sym, (SDLKeymod)e.Key.Keysym.Mod));
 					break;
 			}
 		}
@@ -298,8 +298,9 @@ namespace FamiSharp
 		public double Delta { get; set; } = delta;
 	}
 
-	public class KeycodeEventArgs(SDLKeyCode keycode) : EventArgs
+	public class KeycodeEventArgs(SDLKeyCode keycode, SDLKeymod modifier) : EventArgs
 	{
 		public SDLKeyCode Keycode { get; set; } = keycode;
+		public SDLKeymod Modifier { get; set; } = modifier;
 	}
 }

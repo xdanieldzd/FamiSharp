@@ -1,4 +1,5 @@
 ﻿using FamiSharp.UserInterface;
+using Hexa.NET.SDL2;
 using NativeFileDialogNET;
 
 namespace FamiSharp
@@ -11,6 +12,8 @@ namespace FamiSharp
 		MainMenuItem? helpAboutMenuItem;
 
 		MainMenuItem? fileMenuItem, emulationMenuItem, optionsMenuItem, helpMenuItem;
+
+		readonly List<MainMenuItem> menuItemsWithShortcuts = [];
 
 		StatusBarItem? statusStatusBarItem, fpsStatusBarItem;
 
@@ -25,24 +28,11 @@ namespace FamiSharp
 			foreach (var (desc, ext) in romFileExtensions)
 				openRomDialog.AddFilter(desc, ext);
 
-			fileOpenMenuItem = new("Open ROM", clickAction: (s) =>
-			{
-				var (lastRomDirectory, lastRomFilename) = (string.Empty, string.Empty);
-				if (!string.IsNullOrEmpty(AppEnvironment.Configuration.LastRomLoaded))
-				{
-					lastRomDirectory = Path.GetDirectoryName(AppEnvironment.Configuration.LastRomLoaded);
-					lastRomFilename = Path.GetFileName(AppEnvironment.Configuration.LastRomLoaded);
-				}
-				if (openRomDialog.Open(out string? filename, lastRomDirectory, lastRomFilename) == DialogResult.Okay && filename != null)
-				{
-					LoadAndRunCartridge(filename);
-					displayWindow.IsFocused = true;
-				}
-			});
+			fileOpenMenuItem = new("Open ROM", SDLKeyCode.O, clickAction: (s) => { ShowOpenRomDialog(); });
 			fileExitMenuItem = new("Exit", clickAction: (s) => { Exit(); });
 
-			emulationPauseMenuItem = new("Pause", clickAction: (s) => { isEmulationPaused = !isEmulationPaused; }, updateAction: (s) => { s.IsEnabled = isSystemRunning; s.IsChecked = isEmulationPaused; });
-			emulationResetMenuItem = new("Reset", clickAction: (s) => { nes.Reset(); LoadCartridgeRam(); }, updateAction: (s) => { s.IsEnabled = isSystemRunning; });
+			emulationPauseMenuItem = new("Pause", SDLKeyCode.P, clickAction: (s) => { isEmulationPaused = !isEmulationPaused; }, updateAction: (s) => { s.IsEnabled = isSystemRunning; s.IsChecked = isEmulationPaused; });
+			emulationResetMenuItem = new("Reset", SDLKeyCode.R, clickAction: (s) => { nes.Reset(); LoadCartridgeRam(); }, updateAction: (s) => { s.IsEnabled = isSystemRunning; });
 			emulationShutdownMenuItem = new("Shutdown", clickAction: (s) => { StopEmulation(); }, updateAction: (s) => { s.IsEnabled = isSystemRunning; });
 
 			optionsLimitFpsMenuItem = new("Limit FPS", clickAction: (s) => { AppEnvironment.Configuration.LimitFps = !AppEnvironment.Configuration.LimitFps; }, updateAction: (s) => { s.IsChecked = AppEnvironment.Configuration.LimitFps; });
@@ -54,8 +44,25 @@ namespace FamiSharp
 			optionsMenuItem = new("Options") { SubItems = [optionsLimitFpsMenuItem] };
 			helpMenuItem = new("Help") { SubItems = [helpAboutMenuItem] };
 
+			menuItemsWithShortcuts.AddRange([fileOpenMenuItem, emulationPauseMenuItem, emulationResetMenuItem]);
+
 			statusStatusBarItem = new("Ready!") { ShowSeparator = false };
 			fpsStatusBarItem = new(string.Empty) { TextAlignment = StatusBarItemTextAlign.Center, ItemAlignment = StatusBarItemAlign.Right, Width = 80 };
+		}
+
+		private bool HandleMenuShortcuts(KeycodeEventArgs e)
+		{
+			if ((e.Modifier & SDLKeymod.Ctrl) == 0) return false;
+
+			foreach (var menuItem in menuItemsWithShortcuts)
+			{
+				if (e.Keycode == menuItem.Shortcut)
+				{
+					menuItem.ClickAction(menuItem);
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 }

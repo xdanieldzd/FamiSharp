@@ -1,6 +1,7 @@
 ﻿using FamiSharp.Emulation;
 using FamiSharp.Emulation.Cartridges;
 using FamiSharp.UserInterface;
+using NativeFileDialogNET;
 using SDLKeyCode = Hexa.NET.SDL2.SDLKeyCode;
 
 namespace FamiSharp
@@ -52,6 +53,9 @@ namespace FamiSharp
 
 		public override void OnKeyDown(KeycodeEventArgs e)
 		{
+			if (HandleMenuShortcuts(e))
+				return;
+
 			switch (e.Keycode)
 			{
 				case SDLKeyCode.Escape: Exit(); break;
@@ -146,6 +150,21 @@ namespace FamiSharp
 
 			AppEnvironment.Configuration.DisplaySize = displayWindow.WindowScale;
 			AppEnvironment.Configuration.SaveToFile(AppEnvironment.ConfigurationFilename);
+		}
+
+		private void ShowOpenRomDialog()
+		{
+			var (lastRomDirectory, lastRomFilename) = (string.Empty, string.Empty);
+			if (!string.IsNullOrEmpty(AppEnvironment.Configuration.LastRomLoaded))
+			{
+				lastRomDirectory = Path.GetDirectoryName(AppEnvironment.Configuration.LastRomLoaded);
+				lastRomFilename = Path.GetFileName(AppEnvironment.Configuration.LastRomLoaded);
+			}
+			if (openRomDialog.Open(out string? filename, lastRomDirectory, lastRomFilename) == DialogResult.Okay && filename != null)
+			{
+				LoadAndRunCartridge(filename);
+				displayWindow.IsFocused = true;
+			}
 		}
 
 		private void LoadAndRunCartridge(string filename)

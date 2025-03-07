@@ -1,4 +1,5 @@
 ﻿using Hexa.NET.ImGui;
+using Hexa.NET.SDL2;
 
 namespace FamiSharp.UserInterface
 {
@@ -38,16 +39,17 @@ namespace FamiSharp.UserInterface
 				else
 				{
 					mainMenuItem.UpdateAction?.Invoke(mainMenuItem);
-					if (ImGui.MenuItem(mainMenuItem.Label, string.Empty, mainMenuItem.IsChecked, mainMenuItem.IsEnabled) && mainMenuItem.ClickAction != null)
+					if (ImGui.MenuItem(mainMenuItem.Label, mainMenuItem.Shortcut != SDLKeyCode.Unknown ? $"Ctrl+{mainMenuItem.Shortcut}" : string.Empty, mainMenuItem.IsChecked, mainMenuItem.IsEnabled) && mainMenuItem.ClickAction != null)
 						mainMenuItem.ClickAction(mainMenuItem);
 				}
 			}
 		}
 	}
 
-	public sealed class MainMenuItem(string label = "Label", Action<MainMenuItem> clickAction = null!, Action<MainMenuItem> updateAction = null!)
+	public sealed class MainMenuItem(string label = "Label", SDLKeyCode shortcut = SDLKeyCode.Unknown, Action<MainMenuItem> clickAction = null!, Action<MainMenuItem> updateAction = null!)
 	{
 		public string Label { get; set; } = label;
+		public SDLKeyCode Shortcut { get; set; } = shortcut;
 		public Action<MainMenuItem> ClickAction { get; set; } = clickAction;
 		public Action<MainMenuItem> UpdateAction { get; set; } = updateAction;
 		public MainMenuItem[] SubItems { get; set; } = [];
