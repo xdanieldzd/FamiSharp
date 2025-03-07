@@ -101,8 +101,6 @@ namespace FamiSharp.Emulation
 
 			Ticks++;
 
-			RequestInput?.Invoke(this, inputEventArgs);
-
 			return frameComplete;
 		}
 
@@ -140,7 +138,10 @@ namespace FamiSharp.Emulation
 				else if (address == 0x4014)
 					OAMDMA = (value, 0, true, OAMDMA.Data, OAMDMA.Dummy);
 				else if (address >= 0x4016 && address < 0x4018)
+				{
+					RequestInput?.Invoke(this, inputEventArgs);
 					controllerState[address & 0x0001] = inputEventArgs.ControllerData[address & 0x0001];
+				}
 			}
 		}
 	}

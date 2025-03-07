@@ -25,7 +25,7 @@ namespace FamiSharp.UserInterface
 			ImGui.SetNextWindowContentSize(textureSize + childBorderSize * 2f);
 
 			ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
-			if (ImGui.Begin(Title))
+			if (ImGui.Begin(Title, ImGuiWindowFlags.NoNav))
 			{
 				var drawList = ImGui.GetWindowDrawList();
 				var screenPos = ImGui.GetCursorScreenPos();

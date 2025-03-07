@@ -222,8 +222,6 @@ namespace FamiSharp
 			{
 				OnUpdate(new(guiIo.DeltaTime));
 
-				SDL.PumpEvents();
-
 				while (SDL.PollEvent(ref currentEvent) != 0)
 				{
 					ImGuiImplSDL2.ProcessEvent((Hexa.NET.ImGui.Backends.SDL2.SDLEvent*)&currentEvent);
