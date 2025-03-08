@@ -8,10 +8,11 @@ namespace FamiSharp
 	{
 		MainMenuItem? fileOpenMenuItem, fileExitMenuItem;
 		MainMenuItem? emulationPauseMenuItem, emulationResetMenuItem, emulationShutdownMenuItem;
+		MainMenuItem? debugDisassemblyMenuItem, debugCpuStatusMenuItem;
 		MainMenuItem? optionsLimitFpsMenuItem;
 		MainMenuItem? helpAboutMenuItem;
 
-		MainMenuItem? fileMenuItem, emulationMenuItem, optionsMenuItem, helpMenuItem;
+		MainMenuItem? fileMenuItem, emulationMenuItem, debugMenuItem, optionsMenuItem, helpMenuItem;
 
 		readonly List<MainMenuItem> menuItemsWithShortcuts = [];
 
@@ -19,6 +20,8 @@ namespace FamiSharp
 
 		readonly DisplayWindow displayWindow = new() { IsWindowOpen = true, WindowScale = AppEnvironment.Configuration.DisplaySize };
 		readonly AboutWindow aboutWindow = new();
+		readonly CpuStatusWindow cpuStatusWindow = new();
+		readonly CpuDisassemblyWindow cpuDisassemblyWindow = new();
 
 		readonly static (string Description, string Extension)[] romFileExtensions = [("NES ROM files", "nes")];
 		readonly NativeFileDialog openRomDialog = new();
@@ -35,12 +38,16 @@ namespace FamiSharp
 			emulationResetMenuItem = new("Reset", SDLKeyCode.R, clickAction: (s) => { nes.Reset(); LoadCartridgeRam(); }, updateAction: (s) => { s.IsEnabled = isSystemRunning; });
 			emulationShutdownMenuItem = new("Shutdown", clickAction: (s) => { StopEmulation(); }, updateAction: (s) => { s.IsEnabled = isSystemRunning; });
 
+			debugDisassemblyMenuItem = new("Disassembly", clickAction: (s) => { cpuDisassemblyWindow.IsWindowOpen = true; cpuDisassemblyWindow.IsFocused = true; });
+			debugCpuStatusMenuItem = new("CPU Status", clickAction: (s) => { cpuStatusWindow.IsWindowOpen = true; cpuStatusWindow.IsFocused = true; });
+
 			optionsLimitFpsMenuItem = new("Limit FPS", clickAction: (s) => { AppEnvironment.Configuration.LimitFps = !AppEnvironment.Configuration.LimitFps; }, updateAction: (s) => { s.IsChecked = AppEnvironment.Configuration.LimitFps; });
 
-			helpAboutMenuItem = new("About", clickAction: (s) => { aboutWindow.IsWindowOpen = true; });
+			helpAboutMenuItem = new("About", clickAction: (s) => { aboutWindow.IsWindowOpen = true; aboutWindow.IsFocused = true; });
 
 			fileMenuItem = new("File") { SubItems = [fileOpenMenuItem, new(MainMenu.Seperator), fileExitMenuItem] };
 			emulationMenuItem = new("Emulation") { SubItems = [emulationPauseMenuItem, emulationResetMenuItem, new(MainMenu.Seperator), emulationShutdownMenuItem] };
+			debugMenuItem = new("Debug") { SubItems = [debugDisassemblyMenuItem, debugCpuStatusMenuItem] };
 			optionsMenuItem = new("Options") { SubItems = [optionsLimitFpsMenuItem] };
 			helpMenuItem = new("Help") { SubItems = [helpAboutMenuItem] };
 

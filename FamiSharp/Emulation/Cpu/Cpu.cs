@@ -71,12 +71,12 @@ namespace FamiSharp.Emulation.Cpu
 			{ Instruction.TSX, InstructionTSX }, { Instruction.TXA, InstructionTXA }, { Instruction.TXS, InstructionTXS }, { Instruction.TYA, InstructionTYA }
 		};
 
-		public ushort PC { get; private set; } = 0;
-		public byte S { get; private set; } = 0;
-		public ProcessorStatus P { get; private set; } = new();
-		public byte A { get; private set; } = 0;
-		public byte X { get; private set; } = 0;
-		public byte Y { get; private set; } = 0;
+		public ushort PC { get; set; } = 0;
+		public byte S { get; set; } = 0;
+		public ProcessorStatus P { get; set; } = new();
+		public byte A { get; set; } = 0;
+		public byte X { get; set; } = 0;
+		public byte Y { get; set; } = 0;
 
 		public byte Opcode { get; private set; } = 0;
 		public Instruction Instruction { get; private set; } = Instruction.NOP;
@@ -1070,6 +1070,24 @@ namespace FamiSharp.Emulation.Cpu
 			Z = (status & bitZero) != 0,
 			C = (status & bitCarry) != 0
 		};
+
+		public override bool Equals(object? obj)
+		{
+			if (obj == null || obj is not ProcessorStatus processorStatus)
+				return false;
+
+			if (N != processorStatus.N || V != processorStatus.V ||
+				D != processorStatus.D || I != processorStatus.I ||
+				Z != processorStatus.Z || C != processorStatus.C)
+				return false;
+
+			return true;
+		}
+
+		public override int GetHashCode()
+		{
+			return HashCode.Combine(N, V, D, I, Z, C);
+		}
 
 		public override string ToString()
 		{

@@ -134,14 +134,22 @@ namespace FamiSharp
 
 		public override void OnRenderGUI(DeltaTimeEventArgs e)
 		{
-			MainMenu.Draw(new MainMenuItem?[] { fileMenuItem, emulationMenuItem, optionsMenuItem, helpMenuItem });
+			MainMenu.Draw(new MainMenuItem?[] { fileMenuItem, emulationMenuItem, debugMenuItem, optionsMenuItem, helpMenuItem });
 			StatusBar.Draw(new StatusBarItem?[] { statusStatusBarItem, fpsStatusBarItem });
 
 			displayWindow.Draw(displayTexture);
 			aboutWindow.Draw(AppEnvironment.ApplicationInfo);
 
-			if (GlobalVariables.IsAuthorsMachine && GlobalVariables.IsDebugBuild)
-				Hexa.NET.ImGui.ImGui.ShowDemoWindow();
+			cpuStatusWindow.Draw(nes);
+			cpuDisassemblyWindow.Draw(nes);
+
+			if (GlobalVariables.IsAuthorsMachine)
+			{
+				cpuStatusWindow.IsWindowOpen = true;
+				cpuDisassemblyWindow.IsWindowOpen = true;
+				if (GlobalVariables.IsDebugBuild)
+					Hexa.NET.ImGui.ImGui.ShowDemoWindow();
+			}
 		}
 
 		public override void OnShutdown()

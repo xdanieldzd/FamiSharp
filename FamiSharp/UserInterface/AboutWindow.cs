@@ -13,17 +13,21 @@ namespace FamiSharp.UserInterface
 			var io = ImGui.GetIO();
 
 			ImGui.SetNextWindowPos(new(io.DisplaySize.X * 0.5f, io.DisplaySize.Y * 0.5f), ImGuiCond.Always, new(0.5f, 0.5f));
-			if (ImGui.Begin(Title, ref isWindowOpen, ImGuiWindowFlags.NoCollapse))
+			if (!ImGui.Begin(Title, ref isWindowOpen, ImGuiWindowFlags.NoCollapse))
 			{
-				ImGui.Text($"{appInfo.Name} v{appInfo.Version}");
-				ImGui.Text(appInfo.Copyright);
-				ImGui.Separator();
-				ImGui.TextLinkOpenURL("Homepage", "https://github.com/xdanieldzd/FamiSharp"); ImGui.SameLine();
-				ImGui.TextLinkOpenURL("Releases", "https://github.com/xdanieldzd/FamiSharp/releases");
-				ImGui.NewLine();
-
-				if (ImGui.Button("Close", new(ImGui.GetContentRegionAvail().X, 0f))) IsWindowOpen = false;
+				ImGui.End();
+				return;
 			}
+
+			ImGui.Text($"{appInfo.Name} v{appInfo.Version}");
+			ImGui.Text(appInfo.Copyright);
+			ImGui.Separator();
+			ImGui.TextLinkOpenURL("Homepage", "https://github.com/xdanieldzd/FamiSharp"); ImGui.SameLine();
+			ImGui.TextLinkOpenURL("Releases", "https://github.com/xdanieldzd/FamiSharp/releases");
+			ImGui.NewLine();
+
+			if (ImGui.Button("Close", new(ImGui.GetContentRegionAvail().X, 0f))) IsWindowOpen = false;
+
 			ImGui.End();
 		}
 	}
