@@ -9,11 +9,11 @@ namespace FamiSharp.UserInterface
 
 		readonly (ushort, byte?[], string)[] disassembly = new (ushort, byte?[], string)[256];
 
+		public CpuDisassemblyWindow() : base(new(0f, 400f), ImGuiCond.Always) { }
+
 		protected override void DrawWindow(object? userData)
 		{
 			if (userData is not NesSystem nes) return;
-
-			ImGui.SetNextWindowSize(new(0f, 400f), ImGuiCond.Always);
 
 			if (!ImGui.Begin(Title, ref isWindowOpen))
 			{
