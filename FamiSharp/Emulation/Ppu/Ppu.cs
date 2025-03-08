@@ -41,6 +41,10 @@
 
 		readonly byte[] framebuffer = new byte[256 * 240 * 4];
 
+		public bool NametablesDirty { get; private set; } = false;
+		public bool PatternTablesDirty { get; private set; } = false;
+		public bool PaletteDirty { get; private set; } = false;
+
 		public void Initialize()
 		{
 			for (var i = 0; i < framebuffer.Length; i += 4)
@@ -243,6 +247,7 @@
 				if (address is >= 0x0000 and < 0x2000)
 				{
 					PatternTables[(address & 0x1000) >> 12, address & 0x0FFF] = value;
+					PatternTablesDirty = true;
 				}
 				else if (address is >= 0x2000 and < 0x3F00)
 				{
@@ -272,6 +277,7 @@
 							Nametables[0, address & 0x03FF] = value;
 							break;
 					}
+					NametablesDirty = true;
 				}
 				else if (address is >= 0x3F00 and < 0x4000)
 				{
@@ -281,6 +287,7 @@
 					if (address == 0x0018) address = 0x0008;
 					if (address == 0x001C) address = 0x000C;
 					Palette[address] = value;
+					PaletteDirty = true;
 				}
 			}
 		}
@@ -377,6 +384,13 @@
 						}
 					}
 				}
+			}
+
+			if (Scanline == 0 && Cycle == 0)
+			{
+				NametablesDirty = false;
+				PatternTablesDirty = false;
+				PaletteDirty = false;
 			}
 
 			if (Scanline >= -1 && Scanline < 240)

@@ -142,11 +142,13 @@ namespace FamiSharp
 
 			cpuStatusWindow.Draw(nes);
 			cpuDisassemblyWindow.Draw(nes);
+			patternTableWindow.Draw(nes);
 
 			if (GlobalVariables.IsAuthorsMachine)
 			{
 				cpuStatusWindow.IsWindowOpen = true;
 				cpuDisassemblyWindow.IsWindowOpen = true;
+				patternTableWindow.IsWindowOpen = true;
 				if (GlobalVariables.IsDebugBuild)
 					Hexa.NET.ImGui.ImGui.ShowDemoWindow();
 			}

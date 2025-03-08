@@ -8,7 +8,7 @@ namespace FamiSharp
 	{
 		MainMenuItem? fileOpenMenuItem, fileExitMenuItem;
 		MainMenuItem? emulationPauseMenuItem, emulationResetMenuItem, emulationShutdownMenuItem;
-		MainMenuItem? debugDisassemblyMenuItem, debugCpuStatusMenuItem;
+		MainMenuItem? debugDisassemblyMenuItem, debugCpuStatusMenuItem, debugPatternTableMenuItem;
 		MainMenuItem? optionsLimitFpsMenuItem;
 		MainMenuItem? helpAboutMenuItem;
 
@@ -22,6 +22,7 @@ namespace FamiSharp
 		readonly AboutWindow aboutWindow = new();
 		readonly CpuStatusWindow cpuStatusWindow = new();
 		readonly CpuDisassemblyWindow cpuDisassemblyWindow = new();
+		readonly PatternTableWindow patternTableWindow = new();
 
 		readonly static (string Description, string Extension)[] romFileExtensions = [("NES ROM files", "nes")];
 		readonly NativeFileDialog openRomDialog = new();
@@ -40,6 +41,7 @@ namespace FamiSharp
 
 			debugDisassemblyMenuItem = new("Disassembly", clickAction: (s) => { cpuDisassemblyWindow.IsWindowOpen = true; cpuDisassemblyWindow.IsFocused = true; });
 			debugCpuStatusMenuItem = new("CPU Status", clickAction: (s) => { cpuStatusWindow.IsWindowOpen = true; cpuStatusWindow.IsFocused = true; });
+			debugPatternTableMenuItem = new("Pattern Tables", clickAction: (s) => { patternTableWindow.IsWindowOpen = true; patternTableWindow.IsFocused = true; });
 
 			optionsLimitFpsMenuItem = new("Limit FPS", clickAction: (s) => { AppEnvironment.Configuration.LimitFps = !AppEnvironment.Configuration.LimitFps; }, updateAction: (s) => { s.IsChecked = AppEnvironment.Configuration.LimitFps; });
 
@@ -47,7 +49,7 @@ namespace FamiSharp
 
 			fileMenuItem = new("File") { SubItems = [fileOpenMenuItem, new(MainMenu.Seperator), fileExitMenuItem] };
 			emulationMenuItem = new("Emulation") { SubItems = [emulationPauseMenuItem, emulationResetMenuItem, new(MainMenu.Seperator), emulationShutdownMenuItem] };
-			debugMenuItem = new("Debug") { SubItems = [debugDisassemblyMenuItem, debugCpuStatusMenuItem] };
+			debugMenuItem = new("Debug") { SubItems = [debugDisassemblyMenuItem, debugCpuStatusMenuItem, debugPatternTableMenuItem] };
 			optionsMenuItem = new("Options") { SubItems = [optionsLimitFpsMenuItem] };
 			helpMenuItem = new("Help") { SubItems = [helpAboutMenuItem] };
 
