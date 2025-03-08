@@ -36,6 +36,8 @@ namespace FamiSharp.UserInterface
 		(int pt, int x, int y) hoveredTile = (-1, -1, -1), selectedTile = (0, 0, 0);
 		int patternArrangementIdx = 0, paletteIdx = 0;
 
+		bool updateRequired = false;
+
 		readonly byte[][] patternTablesTextureData = new byte[numPatternTables][];
 		readonly OpenGLTexture[] patternTableTextures = new OpenGLTexture[numPatternTables];
 
@@ -76,8 +78,11 @@ namespace FamiSharp.UserInterface
 			var drawList = ImGui.GetWindowDrawList();
 			var tileSize = new Vector2(8f * zoom, 8f * zoom);
 
-			if (nes.Ppu.PatternTablesDirty || nes.Ppu.PaletteDirty)
+			if (updateRequired || nes.Ppu.PatternTablesDirty || nes.Ppu.PaletteDirty)
+			{
 				UpdatePatternTableTextures(nes, paletteIdx, patternArrangementIdx);
+				updateRequired = false;
+			}
 
 			if (ImGui.BeginTable("patterntables", 3))
 			{
@@ -145,17 +150,18 @@ namespace FamiSharp.UserInterface
 				{
 					ImGui.TableNextRow();
 					ImGui.TableSetColumnIndex(0);
-					ImGui.RadioButton("8x8", ref patternArrangementIdx, 0);
+					if (ImGui.RadioButton("8x8", ref patternArrangementIdx, 0)) updateRequired = true;
 					ImGui.TableSetColumnIndex(1);
-					ImGui.RadioButton("8x16", ref patternArrangementIdx, 1);
+					if (ImGui.RadioButton("8x16", ref patternArrangementIdx, 1)) updateRequired = true;
 					ImGui.TableSetColumnIndex(2);
-					ImGui.RadioButton("16x16", ref patternArrangementIdx, 2);
+					if (ImGui.RadioButton("16x16", ref patternArrangementIdx, 2)) updateRequired = true;
 					ImGui.EndTable();
 				}
 
 				ImGui.SeparatorText("Palette");
 				ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-				ImGui.SliderInt("##palette-number", ref paletteIdx, 0, 7, $"#{paletteIdx} ({(paletteIdx < 4 ? "Background" : "Sprites")} #{paletteIdx & 0b011})");
+				if (ImGui.SliderInt("##palette-number", ref paletteIdx, 0, 7, $"#{paletteIdx} ({(paletteIdx < 4 ? "Background" : "Sprites")} #{paletteIdx & 0b011})"))
+					updateRequired = true;
 
 				ImGui.EndTable();
 			}
