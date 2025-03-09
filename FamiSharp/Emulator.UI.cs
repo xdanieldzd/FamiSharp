@@ -39,9 +39,9 @@ namespace FamiSharp
 			emulationResetMenuItem = new("Reset", SDLKeyCode.R, clickAction: (s) => { nes.Reset(); LoadCartridgeRam(); }, updateAction: (s) => { s.IsEnabled = isSystemRunning; });
 			emulationShutdownMenuItem = new("Shutdown", clickAction: (s) => { StopEmulation(); }, updateAction: (s) => { s.IsEnabled = isSystemRunning; });
 
-			debugDisassemblyMenuItem = new("Disassembly", clickAction: (s) => { cpuDisassemblyWindow.IsWindowOpen = true; cpuDisassemblyWindow.IsFocused = true; });
-			debugCpuStatusMenuItem = new("CPU Status", clickAction: (s) => { cpuStatusWindow.IsWindowOpen = true; cpuStatusWindow.IsFocused = true; });
-			debugPatternTableMenuItem = new("Pattern Tables", clickAction: (s) => { patternTableWindow.IsWindowOpen = true; patternTableWindow.IsFocused = true; });
+			debugDisassemblyMenuItem = new("Disassembly", clickAction: (s) => { cpuDisassemblyWindow.IsWindowOpen = true; cpuDisassemblyWindow.IsFocused = true; }, updateAction: (s) => { s.IsChecked = cpuDisassemblyWindow.IsWindowOpen; });
+			debugCpuStatusMenuItem = new("CPU Status", clickAction: (s) => { cpuStatusWindow.IsWindowOpen = true; cpuStatusWindow.IsFocused = true; }, updateAction: (s) => { s.IsChecked = cpuStatusWindow.IsWindowOpen; });
+			debugPatternTableMenuItem = new("Pattern Tables", clickAction: (s) => { patternTableWindow.IsWindowOpen = true; patternTableWindow.IsFocused = true; }, updateAction: (s) => { s.IsChecked = patternTableWindow.IsWindowOpen; });
 
 			optionsLimitFpsMenuItem = new("Limit FPS", clickAction: (s) => { AppEnvironment.Configuration.LimitFps = !AppEnvironment.Configuration.LimitFps; }, updateAction: (s) => { s.IsChecked = AppEnvironment.Configuration.LimitFps; });
 

@@ -47,8 +47,15 @@ namespace FamiSharp
 
 			displayTexture = new(256, 240);
 
-			if (GlobalVariables.IsAuthorsMachine && GlobalVariables.IsDebugBuild)
-				LoadAndRunCartridge(AppEnvironment.Configuration.LastRomLoaded);
+			if (GlobalVariables.IsAuthorsMachine)
+			{
+				if (GlobalVariables.IsDebugBuild)
+					LoadAndRunCartridge(AppEnvironment.Configuration.LastRomLoaded);
+
+				cpuStatusWindow.IsWindowOpen = true;
+				cpuDisassemblyWindow.IsWindowOpen = true;
+				patternTableWindow.IsWindowOpen = true;
+			}
 		}
 
 		public override void OnKeyDown(KeycodeEventArgs e)
@@ -112,8 +119,7 @@ namespace FamiSharp
 			{
 				if (isSystemRunning && !isEmulationPaused)
 				{
-					while (!nes.Tick()) { }
-					do { nes.Tick(); } while (nes.Cpu.Cycles != 0);
+					nes.RunFrame();
 
 					framesPerSecond = 1.0 / frameTimeElapsed;
 				}
@@ -144,14 +150,8 @@ namespace FamiSharp
 			cpuDisassemblyWindow.Draw(nes);
 			patternTableWindow.Draw(nes);
 
-			if (GlobalVariables.IsAuthorsMachine)
-			{
-				cpuStatusWindow.IsWindowOpen = true;
-				cpuDisassemblyWindow.IsWindowOpen = true;
-				patternTableWindow.IsWindowOpen = true;
-				if (GlobalVariables.IsDebugBuild)
-					Hexa.NET.ImGui.ImGui.ShowDemoWindow();
-			}
+			if (GlobalVariables.IsAuthorsMachine && GlobalVariables.IsDebugBuild)
+				Hexa.NET.ImGui.ImGui.ShowDemoWindow();
 		}
 
 		public override void OnShutdown()
