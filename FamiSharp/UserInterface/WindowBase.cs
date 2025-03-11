@@ -4,11 +4,13 @@ namespace FamiSharp.UserInterface
 {
 	public abstract class WindowBase
 	{
-		protected bool isWindowOpen = false;
-		protected bool isFirstOpen = true;
-		protected bool isFocused = false;
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields", Justification = "Required in derived classes, ImGui.Begin requires argument pOpen as reference")]
+		protected bool windowOpen;
 
-		public bool IsWindowOpen { get => isWindowOpen; set => isWindowOpen = value; }
+		bool isFirstOpen = true;
+		bool isFocused;
+
+		public bool IsWindowOpen { get => windowOpen; set => windowOpen = value; }
 
 		public abstract string Title { get; }
 
@@ -31,7 +33,7 @@ namespace FamiSharp.UserInterface
 
 		public virtual void Draw(object? userData)
 		{
-			if (!isWindowOpen) return;
+			if (!windowOpen) return;
 
 			if (isFirstOpen)
 			{

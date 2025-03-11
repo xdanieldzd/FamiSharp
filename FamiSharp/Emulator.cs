@@ -1,6 +1,7 @@
 ﻿using FamiSharp.Emulation;
 using FamiSharp.Emulation.Cartridges;
 using FamiSharp.UserInterface;
+using FamiSharp.Utilities;
 using NativeFileDialogNET;
 using SDLKeyCode = Hexa.NET.SDL2.SDLKeyCode;
 
@@ -13,9 +14,10 @@ namespace FamiSharp
 		readonly bool[,] buttonsDown = new bool[2, 8];
 
 		string cartridgeFilename = string.Empty, cartSaveFilename = string.Empty;
-		bool isSystemRunning = false, isEmulationPaused = false;
+		bool isSystemRunning, isEmulationPaused;
 
-		double frameTimeElapsed = 0.0, framesPerSecond = 0.0;
+		double frameTimeElapsed, framesPerSecond;
+		readonly AverageFramerate averageFps = new(250);
 
 		public Emulator() : base($"{AppEnvironment.ApplicationInfo.Name} v{AppEnvironment.ApplicationInfo.Version}", 1280, 720)
 		{
@@ -130,6 +132,7 @@ namespace FamiSharp
 					nes?.RunFrame();
 
 					framesPerSecond = 1.0 / frameTimeElapsed;
+					averageFps.Update(frameTimeElapsed);
 				}
 				frameTimeElapsed = 0.0;
 			}
@@ -137,11 +140,12 @@ namespace FamiSharp
 			if (fpsStatusBarItem != null)
 			{
 				fpsStatusBarItem.Label =
-					$"{(isSystemRunning ? (isEmulationPaused ? "Paused" : $"{framesPerSecond:0} FPS") : "Stopped")}";
+					$"{(isSystemRunning ? (isEmulationPaused ? "Paused" : $"{averageFps.Average:0} FPS") : "Stopped")}";
 
 				fpsStatusBarItem.ToolTip =
-					$"Emulator: {framesPerSecond,8:0.00} FPS" + Environment.NewLine +
-					$"GUI:      {GuiFramerate,8:0.00} FPS" + Environment.NewLine +
+					$"Emulator (avg): {averageFps.Average,8:0.00} FPS" + Environment.NewLine +
+					$"Emulator:       {framesPerSecond,8:0.00} FPS" + Environment.NewLine +
+					$"GUI:            {GuiFramerate,8:0.00} FPS" + Environment.NewLine +
 					$"Emulation is {(isSystemRunning ? (isEmulationPaused ? "paused" : "running") : "stopped")}";
 			}
 		}

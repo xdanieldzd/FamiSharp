@@ -32,11 +32,11 @@ namespace FamiSharp.UserInterface
 			]
 		];
 
-		uint hoveredHighlightColor = 0, selectedHighlightColor = 0, hoveredBorderColor = 0, selectedBorderColor = 0;
+		uint hoveredHighlightColor, selectedHighlightColor, hoveredBorderColor, selectedBorderColor;
 		(int pt, int x, int y) hoveredTile = (-1, -1, -1), selectedTile = (0, 0, 0);
-		int patternArrangementIdx = 0, paletteIdx = 0;
+		int patternArrangementIdx, paletteIdx;
 
-		bool updateRequired = false;
+		bool updateRequired;
 
 		readonly byte[][] patternTablesTextureData = new byte[numPatternTables][];
 		readonly OpenGLTexture[] patternTableTextures = new OpenGLTexture[numPatternTables];
@@ -67,7 +67,7 @@ namespace FamiSharp.UserInterface
 		{
 			if (userData is not NesSystem nes) return;
 
-			if (!ImGui.Begin(Title, ref isWindowOpen))
+			if (!ImGui.Begin(Title, ref windowOpen))
 			{
 				ImGui.End();
 				return;

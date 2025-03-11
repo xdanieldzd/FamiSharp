@@ -10,12 +10,12 @@ namespace FamiSharp
 		const GLTextureWrapMode defaultWrapModeS = GLTextureWrapMode.Repeat;
 		const GLTextureWrapMode defaultWrapModeT = GLTextureWrapMode.Repeat;
 
-		public uint Handle { get; } = 0;
+		public uint Handle { get; }
 		public Vector2 Size { get; } = Vector2.Zero;
 
 		(byte r, byte g, byte b, byte a) initialColors = (0, 0, 0, 255);
 
-		bool disposed = false;
+		bool disposed;
 
 		public OpenGLTexture(int width, int height) : this(width, height, 0, 0, 0, 255) { }
 

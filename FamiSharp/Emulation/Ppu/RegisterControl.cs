@@ -2,14 +2,14 @@
 {
 	public class RegisterControl()
 	{
-		public bool EnableNmi { get; set; } = false;
-		public bool SlaveMode { get; set; } = false;
-		public bool EnableLargeSprites { get; set; } = false;
-		public int BgPatternBaseAddress { get; set; } = 0;
-		public int SprPatternBaseAddress { get; set; } = 0;
-		public bool AddressIncrementIsVertical { get; set; } = false;
-		public bool NametableY { get; set; } = false;
-		public bool NametableX { get; set; } = false;
+		public bool EnableNmi { get; set; }
+		public bool SlaveMode { get; set; }
+		public bool EnableLargeSprites { get; set; }
+		public int BgPatternBaseAddress { get; set; }
+		public int SprPatternBaseAddress { get; set; }
+		public bool AddressIncrementIsVertical { get; set; }
+		public bool NametableY { get; set; }
+		public bool NametableX { get; set; }
 
 		public RegisterControl(RegisterControl status) : this()
 		{

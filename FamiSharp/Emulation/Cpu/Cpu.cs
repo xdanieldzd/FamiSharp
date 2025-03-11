@@ -71,20 +71,20 @@ namespace FamiSharp.Emulation.Cpu
 			{ Instruction.TSX, InstructionTSX }, { Instruction.TXA, InstructionTXA }, { Instruction.TXS, InstructionTXS }, { Instruction.TYA, InstructionTYA }
 		};
 
-		public ushort PC { get; set; } = 0;
-		public byte S { get; set; } = 0;
+		public ushort PC { get; set; }
+		public byte S { get; set; }
 		public ProcessorStatus P { get; set; } = new();
-		public byte A { get; set; } = 0;
-		public byte X { get; set; } = 0;
-		public byte Y { get; set; } = 0;
+		public byte A { get; set; }
+		public byte X { get; set; }
+		public byte Y { get; set; }
 
-		public byte Opcode { get; private set; } = 0;
+		public byte Opcode { get; private set; }
 		public Instruction Instruction { get; private set; } = Instruction.NOP;
 		public AddressingMode AddressingMode { get; private set; } = AddressingMode.IMP;
 
-		public ushort Address { get; private set; } = 0;
-		public byte Data { get; private set; } = 0;
-		public int Cycles { get; private set; } = 0;
+		public ushort Address { get; private set; }
+		public byte Data { get; private set; }
+		public int Cycles { get; private set; }
 
 		public abstract byte Read(ushort address);
 		public abstract void Write(ushort address, byte value);
@@ -1036,12 +1036,12 @@ namespace FamiSharp.Emulation.Cpu
 		const byte bitZero = 1 << 1;
 		const byte bitCarry = 1 << 0;
 
-		public bool N { get; set; } = false;
-		public bool V { get; set; } = false;
-		public bool D { get; set; } = false;
-		public bool I { get; set; } = false;
-		public bool Z { get; set; } = false;
-		public bool C { get; set; } = false;
+		public bool N { get; set; }
+		public bool V { get; set; }
+		public bool D { get; set; }
+		public bool I { get; set; }
+		public bool Z { get; set; }
+		public bool C { get; set; }
 
 		public ProcessorStatus(ProcessorStatus status) : this()
 		{

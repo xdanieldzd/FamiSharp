@@ -2,9 +2,9 @@
 {
 	public class RegisterStatus()
 	{
-		public bool VerticalBlank { get; set; } = false;
-		public bool Sprite0Hit { get; set; } = false;
-		public bool SpriteOverflow { get; set; } = false;
+		public bool VerticalBlank { get; set; }
+		public bool Sprite0Hit { get; set; }
+		public bool SpriteOverflow { get; set; }
 
 		public RegisterStatus(RegisterStatus status) : this()
 		{

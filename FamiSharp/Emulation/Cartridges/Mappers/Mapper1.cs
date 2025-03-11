@@ -16,23 +16,23 @@
 		readonly byte[] prgRam = new byte[0x2000];
 
 		/* Load register */
-		byte registerLoad = 0;
-		int registerLoadWriteCount = 0;
+		byte registerLoad;
+		int registerLoadWriteCount;
 
 		/* Control register */
-		int nametableArrangement = 0;   /* 0: single-screen, lower bank; 1: single-screen, upper bank; 2: vertical mirror; 3: horizontal mirror */
-		int prgRomBankMode = 0;
-		int chrRomBankMode = 0;
+		int nametableArrangement;   /* 0: single-screen, lower bank; 1: single-screen, upper bank; 2: vertical mirror; 3: horizontal mirror */
+		int prgRomBankMode;
+		int chrRomBankMode;
 
 		/* CHR banks (4k & 8k modes) */
-		int chr4kBank0 = 0;
-		int chr4kBank1 = 0;
-		int chr8kBank = 0;
+		int chr4kBank0;
+		int chr4kBank1;
+		int chr8kBank;
 
 		/* PRG banks (16k & 32k modes) */
-		int prg16kBank0 = 0;
-		int prg16kBank1 = 0;
-		int prg32kBank = 0;
+		int prg16kBank0;
+		int prg16kBank1;
+		int prg32kBank;
 
 		public override NametableArrangement NametableArrangement => nametableArrangement switch
 		{

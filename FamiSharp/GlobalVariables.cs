@@ -6,7 +6,7 @@
 #if DEBUG
 		public static readonly bool IsDebugBuild = true;
 #else
-		public static readonly bool IsDebugBuild = false;
+		public static readonly bool IsDebugBuild;
 #endif
 	}
 }

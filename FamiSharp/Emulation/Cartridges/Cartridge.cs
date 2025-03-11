@@ -1,4 +1,5 @@
 ﻿using FamiSharp.Emulation.Cartridges.Mappers;
+using FamiSharp.Exceptions;
 
 namespace FamiSharp.Emulation.Cartridges
 {
@@ -41,7 +42,7 @@ namespace FamiSharp.Emulation.Cartridges
 				Mapper.Reset();
 			}
 			else
-				throw new Exception("Selected file is not an NES ROM image.");
+				throw new EmulationException("Selected file is not an NES ROM image.");
 		}
 
 		public bool CpuRead(ushort address, ref byte value)

@@ -100,11 +100,11 @@ namespace FamiSharp.UserInterface
 	public enum StatusBarItemAlign { Left, Right }
 	public enum StatusBarItemTextAlign { Left, Right, Center }
 
-	internal class StatusBarItem(string label = "Label")
+	public sealed class StatusBarItem(string label = "Label")
 	{
 		public string Label { get; set; } = label;
 		public string ToolTip { get; set; } = string.Empty;
-		public float Width { get; set; } = 0f;
+		public float Width { get; set; }
 		public StatusBarItemAlign ItemAlignment { get; set; } = StatusBarItemAlign.Left;
 		public StatusBarItemTextAlign TextAlignment { get; set; } = StatusBarItemTextAlign.Left;
 		public bool ShowSeparator { get; set; } = true;

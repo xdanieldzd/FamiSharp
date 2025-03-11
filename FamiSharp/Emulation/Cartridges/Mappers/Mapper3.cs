@@ -2,7 +2,7 @@
 {
 	public class Mapper3(int numPrgBanks, int numChrBanks) : BaseMapper(numPrgBanks, numChrBanks)
 	{
-		int chrBankSelect = 0;
+		int chrBankSelect;
 
 		public override void Reset()
 		{

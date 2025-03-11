@@ -23,22 +23,22 @@
 
 		/* Bank select / bank data registers */
 		readonly byte[] bankRegisters = [0, 0, 0, 0, 0, 0, 0, 0];
-		int bankRegisterIndex = 0;
-		int prgRomBankMode = 0;
-		int chrA12Inversion = 0;
+		int bankRegisterIndex;
+		int prgRomBankMode;
+		int chrA12Inversion;
 		readonly int[] chrBankAddresses = [0, 0, 0, 0, 0, 0, 0, 0];
 		readonly int[] prgBankAddresses = [0, 0, 0, 0];
 
 		/* Mirroring / PRG RAM write-protect */
-		int nametableArrangement = 0;
+		int nametableArrangement;
 		// TODO: write protect stuff
 
 		/* Interrupts */
-		byte irqCounterReload = 0;
-		int irqCounter = 0;
-		bool irqEnable = false;
-		bool irqPending = false;
-		bool irqReloadPending = false;
+		byte irqCounterReload;
+		int irqCounter;
+		bool irqEnable;
+		bool irqPending;
+		bool irqReloadPending;
 
 		public override void Reset()
 		{

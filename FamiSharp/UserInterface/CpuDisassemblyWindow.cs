@@ -15,7 +15,7 @@ namespace FamiSharp.UserInterface
 		{
 			if (userData is not NesSystem nes) return;
 
-			if (!ImGui.Begin(Title, ref isWindowOpen))
+			if (!ImGui.Begin(Title, ref windowOpen))
 			{
 				ImGui.End();
 				return;

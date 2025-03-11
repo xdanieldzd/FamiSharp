@@ -2,14 +2,14 @@
 {
 	public class RegisterMask()
 	{
-		public bool EmphasizeBlue { get; set; } = false;
-		public bool EmphasizeGreen { get; set; } = false;
-		public bool EmphasizeRed { get; set; } = false;
-		public bool ShowSprites { get; set; } = false;
-		public bool ShowBackground { get; set; } = false;
-		public bool ShowSprLeftBorder { get; set; } = false;
-		public bool ShowBgLeftBorder { get; set; } = false;
-		public bool Grayscale { get; set; } = false;
+		public bool EmphasizeBlue { get; set; }
+		public bool EmphasizeGreen { get; set; }
+		public bool EmphasizeRed { get; set; }
+		public bool ShowSprites { get; set; }
+		public bool ShowBackground { get; set; }
+		public bool ShowSprLeftBorder { get; set; }
+		public bool ShowBgLeftBorder { get; set; }
+		public bool Grayscale { get; set; }
 
 		public int Emphasis => (EmphasizeRed ? 1 << 0 : 0) | (EmphasizeGreen ? 1 << 1 : 0) | (EmphasizeBlue ? 1 << 2 : 0);
 

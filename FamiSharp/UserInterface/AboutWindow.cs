@@ -1,5 +1,6 @@
 ﻿using FamiSharp.Utilities;
 using Hexa.NET.ImGui;
+
 namespace FamiSharp.UserInterface
 {
 	public class AboutWindow : WindowBase
@@ -13,7 +14,7 @@ namespace FamiSharp.UserInterface
 			var io = ImGui.GetIO();
 
 			ImGui.SetNextWindowPos(new(io.DisplaySize.X * 0.5f, io.DisplaySize.Y * 0.5f), ImGuiCond.Always, new(0.5f, 0.5f));
-			if (!ImGui.Begin(Title, ref isWindowOpen, ImGuiWindowFlags.NoCollapse))
+			if (!ImGui.Begin(Title, ref windowOpen, ImGuiWindowFlags.NoCollapse))
 			{
 				ImGui.End();
 				return;

@@ -62,9 +62,9 @@ namespace FamiSharp
 
 		public float GuiFramerate => guiIo.Framerate;
 
-		bool initSdlSuccess = false, initOpenGlSuccess = false, initGuiSuccess = false, isRunning = false;
+		bool initSdlSuccess, initOpenGlSuccess, initGuiSuccess, isRunning;
 
-		bool disposed = false;
+		bool disposed;
 
 		public Application(string title, int width, int height, int swapInterval = 0)
 		{
@@ -281,7 +281,7 @@ namespace FamiSharp
 		}
 	}
 
-	internal unsafe class BindingsContext(SDLWindow* window, SDLGLContext context) : IGLContext
+	internal unsafe sealed class BindingsContext(SDLWindow* window, SDLGLContext context) : IGLContext
 	{
 		public nint Handle => (nint)window;
 

@@ -54,6 +54,6 @@ namespace FamiSharp.UserInterface
 		public Action<MainMenuItem> UpdateAction { get; set; } = updateAction;
 		public MainMenuItem[] SubItems { get; set; } = [];
 		public bool IsEnabled { get; set; } = true;
-		public bool IsChecked { get; set; } = false;
+		public bool IsChecked { get; set; }
 	}
 }

@@ -1,11 +1,13 @@
-﻿namespace FamiSharp.Emulation.Ppu
+﻿using FamiSharp.Exceptions;
+
+namespace FamiSharp.Emulation.Ppu
 {
 	/* https://github.com/OneLoneCoder/olcNES/blob/ac5ce64cdb3a390a89d550c5f130682b37eeb080/Part%20%237%20-%20Mappers%20%26%20Basic%20Sounds/olc2C02.cpp */
 
 	public class Ppu(NesSystem nes)
 	{
-		public int Cycle { get; private set; } = 0;
-		public int Scanline { get; private set; } = 0;
+		public int Cycle { get; private set; }
+		public int Scanline { get; private set; }
 
 		public event EventHandler<FramebufferEventArgs>? TransferFramebuffer;
 
@@ -15,35 +17,35 @@
 
 		public RegisterLoopy CurrentVramAddress { get; private set; } = new();
 		public RegisterLoopy TemporaryVramAddress { get; private set; } = new();
-		public int FineXScroll { get; private set; } = 0;
-		public bool WriteLatchToggle { get; private set; } = false;
-		public byte DataBuffer { get; private set; } = 0;
+		public int FineXScroll { get; private set; }
+		public bool WriteLatchToggle { get; private set; }
+		public byte DataBuffer { get; private set; }
 
 		public byte[,] Nametables { get; private set; } = new byte[2, 1024];
 		public byte[,] PatternTables { get; private set; } = new byte[2, 4096];
 		public byte[] Palette { get; private set; } = new byte[32];
 
-		public (byte Id, byte Attrib, byte Lsb, byte Msb) NextTileData = (0, 0, 0, 0);
-		public (ushort PatternLo, ushort PatternHi, ushort AttribLo, ushort AttribHi) BgShifters = (0, 0, 0, 0);
+		public NextTileData NextTileData { get; private set; } = new();
+		public BgShifter BgShifters { get; private set; } = new();
 
-		public bool NmiOccured { get; set; } = false;
-		public bool IsOddFrame { get; set; } = false;
+		public bool NmiOccured { get; set; }
+		public bool IsOddFrame { get; set; }
 
 		public byte[] OamData { get; private set; } = new byte[64 * 4];
-		public byte OamAddress { get; private set; } = 0;
+		public byte OamAddress { get; private set; }
 		public Sprite[] CurrentSprites { get; private set; } = [new(), new(), new(), new(), new(), new(), new(), new()];
-		public int SpritesOnScanline { get; private set; } = 0;
-		public (byte PatternLo, byte PatternHi)[] SpriteShifters = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0)];
-		public bool Sprite0HitPossible { get; private set; } = false;
-		public bool Sprite0Rendered { get; private set; } = false;
+		public int SpritesOnScanline { get; private set; }
+		public (byte PatternLo, byte PatternHi)[] SpriteShifters { get; private set; } = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0)];
+		public bool Sprite0HitPossible { get; private set; }
+		public bool Sprite0Rendered { get; private set; }
 
 		public byte[] PaletteColors { get; private set; } = new byte[0x200 * 3];
 
 		readonly byte[] framebuffer = new byte[256 * 240 * 4];
 
-		public bool NametablesDirty { get; private set; } = false;
-		public bool PatternTablesDirty { get; private set; } = false;
-		public bool PaletteDirty { get; private set; } = false;
+		public bool NametablesDirty { get; private set; }
+		public bool PatternTablesDirty { get; private set; }
+		public bool PaletteDirty { get; private set; }
 
 		public void Initialize()
 		{
@@ -58,7 +60,7 @@
 
 		public void LoadPalette(byte[] bytes)
 		{
-			if (bytes.Length != 0x600) throw new Exception("Error loading PPU palette: Size mismatch, expected 0x600 bytes. Required format is binary with RGB888 data for all emphasis variants.");
+			if (bytes.Length != 0x600) throw new EmulationException("Error loading PPU palette: Size mismatch, expected 0x600 bytes. Required format is binary with RGB888 data for all emphasis variants.");
 			Buffer.BlockCopy(bytes, 0, PaletteColors, 0, bytes.Length);
 		}
 
@@ -69,8 +71,8 @@
 			DataBuffer = 0;
 			Scanline = 0;
 			Cycle = 0;
-			NextTileData = (0, 0, 0, 0);
-			BgShifters = (0, 0, 0, 0);
+			NextTileData = NextTileData.Empty;
+			BgShifters = BgShifter.Empty;
 			NmiOccured = false;
 			IsOddFrame = false;
 			RegisterStatus = 0;
@@ -691,6 +693,26 @@
 
 			return false;
 		}
+	}
+
+	public class BgShifter
+	{
+		public ushort PatternLo { get; set; }
+		public ushort PatternHi { get; set; }
+		public ushort AttribLo { get; set; }
+		public ushort AttribHi { get; set; }
+
+		public static BgShifter Empty => new() { PatternLo = 0, PatternHi = 0, AttribLo = 0, AttribHi = 0 };
+	}
+
+	public class NextTileData
+	{
+		public byte Id { get; set; }
+		public byte Attrib { get; set; }
+		public byte Lsb { get; set; }
+		public byte Msb { get; set; }
+
+		public static NextTileData Empty => new() { Id = 0, Attrib = 0, Lsb = 0, Msb = 0 };
 	}
 
 	public class FramebufferEventArgs : EventArgs

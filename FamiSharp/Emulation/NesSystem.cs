@@ -9,16 +9,16 @@ namespace FamiSharp.Emulation
 		public byte[] InternalRam { get; private set; }
 		public Cartridge? Cartridge { get; private set; }
 
-		public (byte Page, byte Address, bool InProgress, byte Data, bool Dummy) OAMDMA = (0, 0, false, 0, true);
+		public OamDma OamDma { get; private set; } = new();
 
-		public uint Ticks { get; private set; } = 0;
+		public uint Ticks { get; private set; }
 
 		readonly byte[] controllerState = new byte[2];
 
 		public event EventHandler<InputEventArgs>? RequestInput;
 		readonly InputEventArgs inputEventArgs = new();
 
-		readonly bool isReady = false;
+		readonly bool isReady;
 
 		public NesSystem()
 		{
@@ -41,7 +41,7 @@ namespace FamiSharp.Emulation
 			Ppu.Reset();
 			Array.Clear(InternalRam);
 
-			OAMDMA = (0, 0, false, 0, true);
+			OamDma = OamDma.Empty;
 
 			Ticks = 0;
 		}
@@ -60,25 +60,25 @@ namespace FamiSharp.Emulation
 
 			if ((Ticks % 3) == 0)
 			{
-				if (OAMDMA.InProgress)
+				if (OamDma.InProgress)
 				{
-					if (OAMDMA.Dummy)
+					if (OamDma.Dummy)
 					{
 						if ((Ticks % 2) == 1)
-							OAMDMA.Dummy = false;
+							OamDma.Dummy = false;
 					}
 					else
 					{
 						if ((Ticks % 2) == 0)
-							OAMDMA.Data = Read((ushort)((OAMDMA.Page << 8) | OAMDMA.Address));
+							OamDma.Data = Read((ushort)((OamDma.Page << 8) | OamDma.Address));
 						else
 						{
-							Ppu.OamData[OAMDMA.Address] = OAMDMA.Data;
-							OAMDMA.Address++;
-							if (OAMDMA.Address == 0)
+							Ppu.OamData[OamDma.Address] = OamDma.Data;
+							OamDma.Address++;
+							if (OamDma.Address == 0)
 							{
-								OAMDMA.InProgress = false;
-								OAMDMA.Dummy = true;
+								OamDma.InProgress = false;
+								OamDma.Dummy = true;
 							}
 						}
 					}
@@ -136,7 +136,7 @@ namespace FamiSharp.Emulation
 				else if (address >= 0x2000 && address < 0x4000)
 					Ppu.ExternalWrite((ushort)(address & 0x0007), value);
 				else if (address == 0x4014)
-					OAMDMA = (value, 0, true, OAMDMA.Data, OAMDMA.Dummy);
+					OamDma = new() { Page = value, Address = 0, InProgress = true, Data = OamDma.Data, Dummy = OamDma.Dummy };
 				else if (address >= 0x4016 && address < 0x4018)
 				{
 					RequestInput?.Invoke(this, inputEventArgs);
@@ -144,6 +144,17 @@ namespace FamiSharp.Emulation
 				}
 			}
 		}
+	}
+
+	public class OamDma
+	{
+		public byte Page { get; set; }
+		public byte Address { get; set; }
+		public bool InProgress { get; set; }
+		public byte Data { get; set; }
+		public bool Dummy { get; set; }
+
+		public static OamDma Empty => new() { Page = 0, Address = 0, InProgress = false, Data = 0, Dummy = true };
 	}
 
 	public class InputEventArgs : EventArgs

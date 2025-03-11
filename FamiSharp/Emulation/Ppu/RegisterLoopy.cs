@@ -2,11 +2,11 @@
 {
 	public class RegisterLoopy()
 	{
-		public int FineYScroll { get; set; } = 0;
-		public bool NametableY { get; set; } = false;
-		public bool NametableX { get; set; } = false;
-		public int CoarseYScroll { get; set; } = 0;
-		public int CoarseXScroll { get; set; } = 0;
+		public int FineYScroll { get; set; }
+		public bool NametableY { get; set; }
+		public bool NametableX { get; set; }
+		public int CoarseYScroll { get; set; }
+		public int CoarseXScroll { get; set; }
 
 		public RegisterLoopy(RegisterLoopy loopy) : this()
 		{

@@ -48,5 +48,5 @@ namespace FamiSharp
 
 	[JsonSourceGenerationOptions(WriteIndented = true)]
 	[JsonSerializable(typeof(Configuration))]
-	internal partial class SourceGenerationContext : JsonSerializerContext { }
+	internal sealed partial class SourceGenerationContext : JsonSerializerContext { }
 }

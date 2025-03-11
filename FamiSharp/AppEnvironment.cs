@@ -2,7 +2,7 @@
 
 namespace FamiSharp
 {
-	internal class AppEnvironment
+	public sealed class AppEnvironment
 	{
 		const string jsonConfigFileName = "Config.json";
 		const string saveDataDirectoryName = "Saves";
