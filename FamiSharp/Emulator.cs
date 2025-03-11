@@ -8,8 +8,8 @@ namespace FamiSharp
 {
 	public partial class Emulator : Application
 	{
-		readonly NesSystem nes;
-		readonly OpenGLTexture displayTexture;
+		readonly NesSystem? nes;
+		readonly OpenGLTexture? displayTexture;
 		readonly bool[,] buttonsDown = new bool[2, 8];
 
 		string cartridgeFilename = string.Empty, cartSaveFilename = string.Empty;
@@ -19,42 +19,50 @@ namespace FamiSharp
 
 		public Emulator() : base($"{AppEnvironment.ApplicationInfo.Name} v{AppEnvironment.ApplicationInfo.Version}", 1280, 720)
 		{
-			BackgroundColor = new(0x3E / 255.0f, 0x4F / 255.0f, 0x65 / 255.0f); /* ❤️ 🧲 ❤️ */
-
-			InitializeUI();
-
-			nes = new();
-			nes.Ppu.LoadPalette(File.ReadAllBytes(@"Assets\2C02G_wiki.pal"));
-			nes.Ppu.TransferFramebuffer += (s, e) =>
+			try
 			{
-				displayTexture?.Update(e.Data);
-			};
-			nes.RequestInput += (s, e) =>
-			{
-				if (!displayWindow.IsFocused) return;
+				BackgroundColor = new(0x3E / 255.0f, 0x4F / 255.0f, 0x65 / 255.0f); /* ❤️ 🧲 ❤️ */
 
-				for (var ctrl = 0; ctrl < buttonsDown.GetLength(0); ctrl++)
+				InitializeUI();
+
+				nes = new();
+				nes.Ppu.LoadPalette(File.ReadAllBytes(@"Assets\2C02G_wiki.pal")); /* https://www.nesdev.org/w/index.php?title=File:2C02G_wiki.pal&oldid=22304 */
+				nes.Ppu.TransferFramebuffer += (s, e) =>
 				{
-					for (var btn = 0; btn < buttonsDown.GetLength(1); btn++)
+					displayTexture?.Update(e.Data);
+				};
+				nes.RequestInput += (s, e) =>
+				{
+					if (!displayWindow.IsFocused) return;
+
+					for (var ctrl = 0; ctrl < buttonsDown.GetLength(0); ctrl++)
 					{
-						if (buttonsDown[ctrl, btn])
-							e.ControllerData[ctrl] |= (byte)(1 << btn);
-						else
-							e.ControllerData[ctrl] &= (byte)~(1 << btn);
+						for (var btn = 0; btn < buttonsDown.GetLength(1); btn++)
+						{
+							if (buttonsDown[ctrl, btn])
+								e.ControllerData[ctrl] |= (byte)(1 << btn);
+							else
+								e.ControllerData[ctrl] &= (byte)~(1 << btn);
+						}
 					}
+				};
+
+				displayTexture = new(256, 240);
+
+				if (GlobalVariables.IsAuthorsMachine)
+				{
+					if (GlobalVariables.IsDebugBuild)
+						LoadAndRunCartridge(AppEnvironment.Configuration.LastRomLoaded);
+
+					cpuStatusWindow.IsWindowOpen = true;
+					cpuDisassemblyWindow.IsWindowOpen = true;
+					patternTableWindow.IsWindowOpen = true;
 				}
-			};
-
-			displayTexture = new(256, 240);
-
-			if (GlobalVariables.IsAuthorsMachine)
+			}
+			catch (Exception e)
 			{
-				if (GlobalVariables.IsDebugBuild)
-					LoadAndRunCartridge(AppEnvironment.Configuration.LastRomLoaded);
-
-				cpuStatusWindow.IsWindowOpen = true;
-				cpuDisassemblyWindow.IsWindowOpen = true;
-				patternTableWindow.IsWindowOpen = true;
+				ShowMessageBox("Error", $"An error occured while starting the emulator:\n\n{e.Message}", Hexa.NET.SDL2.SDLMessageBoxFlags.Error);
+				Exit();
 			}
 		}
 
@@ -119,7 +127,7 @@ namespace FamiSharp
 			{
 				if (isSystemRunning && !isEmulationPaused)
 				{
-					nes.RunFrame();
+					nes?.RunFrame();
 
 					framesPerSecond = 1.0 / frameTimeElapsed;
 				}
@@ -179,31 +187,32 @@ namespace FamiSharp
 
 		private void LoadAndRunCartridge(string filename)
 		{
-			if (nes == null || string.IsNullOrEmpty(filename)) return;
-
-			if (isSystemRunning)
+			try
 			{
-				isSystemRunning = false;
-				SaveCartridgeRam();
+				if (nes == null || string.IsNullOrEmpty(filename)) return;
+
+				using var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+				nes.LoadCartridge(new Cartridge(new BinaryReader(stream)));
+
+				cartridgeFilename = filename;
+				cartSaveFilename = $"{Path.GetFileNameWithoutExtension(cartridgeFilename)}.sav";
+
+				LoadCartridgeRam();
+
+				nes.Reset();
+
+				if (statusStatusBarItem != null)
+					statusStatusBarItem.Label = $"Emulation started, running '{cartridgeFilename}'";
+
+				AppEnvironment.Configuration.LastRomLoaded = cartridgeFilename;
+				AppEnvironment.Configuration.SaveToFile(AppEnvironment.ConfigurationFilename);
+
+				isSystemRunning = true;
 			}
-
-			cartridgeFilename = filename;
-			cartSaveFilename = $"{Path.GetFileNameWithoutExtension(cartridgeFilename)}.sav";
-
-			using var stream = new FileStream(cartridgeFilename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-			nes.LoadCartridge(new Cartridge(new BinaryReader(stream)));
-
-			LoadCartridgeRam();
-
-			nes.Reset();
-
-			if (statusStatusBarItem != null)
-				statusStatusBarItem.Label = $"Emulation started, running '{cartridgeFilename}'";
-
-			AppEnvironment.Configuration.LastRomLoaded = cartridgeFilename;
-			AppEnvironment.Configuration.SaveToFile(AppEnvironment.ConfigurationFilename);
-
-			isSystemRunning = true;
+			catch (Exception e)
+			{
+				ShowMessageBox("Error", e.Message, Hexa.NET.SDL2.SDLMessageBoxFlags.Error);
+			}
 		}
 
 		private void StopEmulation()
@@ -222,7 +231,7 @@ namespace FamiSharp
 
 		private void LoadCartridgeRam()
 		{
-			if (nes.Cartridge == null) return;
+			if (nes?.Cartridge == null) return;
 
 			if (nes.Cartridge.Header.HasPersistantMemory)
 			{
@@ -237,7 +246,7 @@ namespace FamiSharp
 
 		private void SaveCartridgeRam()
 		{
-			if (nes.Cartridge == null) return;
+			if (nes?.Cartridge == null) return;
 
 			if (nes.Cartridge.Header.HasPersistantMemory)
 			{

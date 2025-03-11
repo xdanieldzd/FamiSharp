@@ -11,10 +11,9 @@ namespace FamiSharp.Emulation.Cartridges
 		public byte[] PrgMemory { get; private set; } = [];
 		public byte[] ChrMemory { get; private set; } = [];
 
-		public BaseMapper? Mapper { get; private set; }
+		public BaseMapper Mapper { get; private set; }
 
-		public NametableArrangement NametableArrangement =>
-			(Mapper != null && Mapper.NametableArrangement != NametableArrangement.Unset) ? Mapper.NametableArrangement : Header.NametableArrangement;
+		public NametableArrangement NametableArrangement => (Mapper.NametableArrangement != NametableArrangement.Unset) ? Mapper.NametableArrangement : Header.NametableArrangement;
 
 		public Cartridge(BinaryReader reader)
 		{
@@ -30,17 +29,19 @@ namespace FamiSharp.Emulation.Cartridges
 				else
 					ChrMemory = new byte[0x2000];
 
-				switch (Header.MapperId)
+				Mapper = Header.MapperId switch
 				{
-					case 0: Mapper = new Mapper0(Header.PrgRomSize, Header.ChrRomSize); break;
-					case 1: Mapper = new Mapper1(Header.PrgRomSize, Header.ChrRomSize); break;
-					case 2: Mapper = new Mapper2(Header.PrgRomSize, Header.ChrRomSize); break;
-					case 3: Mapper = new Mapper3(Header.PrgRomSize, Header.ChrRomSize); break;
-					case 4: Mapper = new Mapper4(Header.PrgRomSize, Header.ChrRomSize); break;
-				}
+					1 => new Mapper1(Header.PrgRomSize, Header.ChrRomSize),
+					2 => new Mapper2(Header.PrgRomSize, Header.ChrRomSize),
+					3 => new Mapper3(Header.PrgRomSize, Header.ChrRomSize),
+					4 => new Mapper4(Header.PrgRomSize, Header.ChrRomSize),
+					_ => new Mapper0(Header.PrgRomSize, Header.ChrRomSize),
+				};
 
-				Mapper?.Reset();
+				Mapper.Reset();
 			}
+			else
+				throw new Exception("Selected file is not an NES ROM image.");
 		}
 
 		public bool CpuRead(ushort address, ref byte value)

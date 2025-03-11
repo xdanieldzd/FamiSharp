@@ -58,7 +58,7 @@
 
 		public void LoadPalette(byte[] bytes)
 		{
-			if (bytes.Length != 0x600) throw new Exception("Palette size mismatch; expected 0x600 bytes, RGB format w/ all emphasis variants");
+			if (bytes.Length != 0x600) throw new Exception("Error loading PPU palette: Size mismatch, expected 0x600 bytes. Required format is binary with RGB888 data for all emphasis variants.");
 			Buffer.BlockCopy(bytes, 0, PaletteColors, 0, bytes.Length);
 		}
 

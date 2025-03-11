@@ -16,7 +16,7 @@ namespace FamiSharp
 
 		const int
 			errorSdlInitFailed = -1, errorCreateWindowFailed = -2, errorGlInitFailed = -3, errorImguiContextFailed = -4,
-			errorImguiImplSdl2Failed = -5, errorImguiImplGlFailed = -6;
+			errorImguiImplSdl2Failed = -5, errorImguiImplGlFailed = -6, errorUnknownInitFailure = -69;
 
 		private static Lazy<GL>? gl;
 		public static GL GL => gl!.Value;
@@ -77,7 +77,10 @@ namespace FamiSharp
 			SDL.SetWindowPosition(sdlWindow, (int)SDL.SDL_WINDOWPOS_CENTERED_MASK, (int)SDL.SDL_WINDOWPOS_CENTERED_MASK);
 			SDL.ShowWindow(sdlWindow);
 
-			isRunning = true;
+			isRunning = initSdlSuccess && initOpenGlSuccess && initGuiSuccess;
+
+			if (!isRunning)
+				FatalError("Failed to initialize application", errorUnknownInitFailure);
 		}
 
 		~Application()
@@ -262,12 +265,18 @@ namespace FamiSharp
 			Dispose();
 		}
 
-		private static void FatalError(string error, int code)
+		public int ShowMessageBox(string title, string message, SDLMessageBoxFlags flags)
 		{
+			return SDL.ShowSimpleMessageBox((uint)flags, title, message, sdlWindow);
+		}
+
+		private void FatalError(string error, int code)
+		{
+			ShowMessageBox("Fatal Error", $"{error}\nExit code {code}", SDLMessageBoxFlags.Error);
+
 			SDL.Quit();
 
 			Console.WriteLine($"Fatal error: {error}");
-			Console.ReadKey();
 			Environment.Exit(code);
 		}
 	}
