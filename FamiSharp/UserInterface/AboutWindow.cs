@@ -9,7 +9,7 @@ namespace FamiSharp.UserInterface
 
 		protected override void DrawWindow(object? userData)
 		{
-			if (userData is not ApplicationInfo appInfo) return;
+			if (userData is not ProductInformation productInfo) return;
 
 			var io = ImGui.GetIO();
 
@@ -20,8 +20,8 @@ namespace FamiSharp.UserInterface
 				return;
 			}
 
-			ImGui.Text($"{appInfo.Name} v{appInfo.Version}");
-			ImGui.Text(appInfo.Copyright);
+			ImGui.Text($"{productInfo.Name} v{productInfo.Version}");
+			ImGui.Text(productInfo.Copyright);
 			ImGui.Separator();
 			ImGui.TextLinkOpenURL("Homepage", "https://github.com/xdanieldzd/FamiSharp"); ImGui.SameLine();
 			ImGui.TextLinkOpenURL("Releases", "https://github.com/xdanieldzd/FamiSharp/releases");

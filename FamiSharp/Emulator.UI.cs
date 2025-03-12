@@ -6,6 +6,15 @@ namespace FamiSharp
 {
 	public partial class Emulator
 	{
+		readonly DisplayWindow displayWindow = new() { IsWindowOpen = true };
+		readonly AboutWindow aboutWindow = new();
+		readonly CpuStatusWindow cpuStatusWindow = new();
+		readonly CpuDisassemblyWindow cpuDisassemblyWindow = new();
+		readonly PatternTableWindow patternTableWindow = new();
+
+		readonly static (string Description, string Extension)[] romFileExtensions = [("NES ROM files", "nes")];
+		readonly NativeFileDialog openRomDialog = new();
+
 		MainMenuItem? fileOpenMenuItem, fileExitMenuItem;
 		MainMenuItem? emulationPauseMenuItem, emulationResetMenuItem, emulationShutdownMenuItem;
 		MainMenuItem? debugDisassemblyMenuItem, debugCpuStatusMenuItem, debugPatternTableMenuItem;
@@ -18,17 +27,10 @@ namespace FamiSharp
 
 		StatusBarItem? statusStatusBarItem, fpsStatusBarItem;
 
-		readonly DisplayWindow displayWindow = new() { IsWindowOpen = true, WindowScale = AppEnvironment.Configuration.DisplaySize };
-		readonly AboutWindow aboutWindow = new();
-		readonly CpuStatusWindow cpuStatusWindow = new();
-		readonly CpuDisassemblyWindow cpuDisassemblyWindow = new();
-		readonly PatternTableWindow patternTableWindow = new();
-
-		readonly static (string Description, string Extension)[] romFileExtensions = [("NES ROM files", "nes")];
-		readonly NativeFileDialog openRomDialog = new();
-
 		private void InitializeUI()
 		{
+			displayWindow.WindowScale = configuration.DisplaySize;
+
 			foreach (var (desc, ext) in romFileExtensions)
 				openRomDialog.AddFilter(desc, ext);
 
@@ -43,7 +45,7 @@ namespace FamiSharp
 			debugCpuStatusMenuItem = new("CPU Status", clickAction: (s) => { cpuStatusWindow.IsWindowOpen = true; cpuStatusWindow.IsFocused = true; }, updateAction: (s) => { s.IsChecked = cpuStatusWindow.IsWindowOpen; });
 			debugPatternTableMenuItem = new("Pattern Tables", clickAction: (s) => { patternTableWindow.IsWindowOpen = true; patternTableWindow.IsFocused = true; }, updateAction: (s) => { s.IsChecked = patternTableWindow.IsWindowOpen; });
 
-			optionsLimitFpsMenuItem = new("Limit FPS", clickAction: (s) => { AppEnvironment.Configuration.LimitFps = !AppEnvironment.Configuration.LimitFps; averageFps.Clear(); }, updateAction: (s) => { s.IsChecked = AppEnvironment.Configuration.LimitFps; });
+			optionsLimitFpsMenuItem = new("Limit FPS", clickAction: (s) => { configuration.LimitFps = !configuration.LimitFps; averageFps.Clear(); }, updateAction: (s) => { s.IsChecked = configuration.LimitFps; });
 
 			helpAboutMenuItem = new("About", clickAction: (s) => { aboutWindow.IsWindowOpen = true; aboutWindow.IsFocused = true; });
 

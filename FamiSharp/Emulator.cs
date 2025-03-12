@@ -9,8 +9,17 @@ namespace FamiSharp
 {
 	public partial class Emulator : Application
 	{
-		readonly NesSystem? nes;
-		readonly OpenGLTexture? displayTexture;
+		const string saveDataDirectoryName = "Saves";
+
+		public override string Title => $"{ProductInformation.Name} v{ProductInformation.Version}";
+		public override int Width => 1280;
+		public override int Height => 720;
+
+		Configuration configuration = new();
+		string saveDataPath = string.Empty;
+
+		NesSystem? nes;
+		OpenGLTexture? displayTexture;
 		readonly bool[,] buttonsDown = new bool[2, 8];
 
 		string cartridgeFilename = string.Empty, cartSaveFilename = string.Empty;
@@ -19,11 +28,12 @@ namespace FamiSharp
 		double frameTimeElapsed, framesPerSecond;
 		readonly AverageFramerate averageFps = new(250);
 
-		public Emulator() : base($"{AppEnvironment.ApplicationInfo.Name} v{AppEnvironment.ApplicationInfo.Version}", 1280, 720)
+		public override void OnLoad()
 		{
 			try
 			{
-				BackgroundColor = new(0x3E / 255.0f, 0x4F / 255.0f, 0x65 / 255.0f); /* ❤️ 🧲 ❤️ */
+				configuration = Configuration.LoadFromFile(ConfigurationPath);
+				Directory.CreateDirectory(saveDataPath = Path.Combine(DataDirectory, saveDataDirectoryName));
 
 				InitializeUI();
 
@@ -54,7 +64,7 @@ namespace FamiSharp
 				if (GlobalVariables.IsAuthorsMachine)
 				{
 					if (GlobalVariables.IsDebugBuild)
-						LoadAndRunCartridge(AppEnvironment.Configuration.LastRomLoaded);
+						LoadAndRunCartridge(configuration.LastRomLoaded);
 
 					cpuStatusWindow.IsWindowOpen = true;
 					cpuDisassemblyWindow.IsWindowOpen = true;
@@ -70,54 +80,34 @@ namespace FamiSharp
 
 		public override void OnKeyDown(KeycodeEventArgs e)
 		{
-			if (HandleMenuShortcuts(e))
-				return;
+			if (HandleMenuShortcuts(e)) return;
 
-			switch (e.Keycode)
-			{
-				case SDLKeyCode.Escape: Exit(); break;
+			HandleControllerInput(e, 0, configuration.Controller1);
+			HandleControllerInput(e, 1, configuration.Controller2);
 
-				case var value when value == AppEnvironment.Configuration.Controller1.Right: buttonsDown[0, 0] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Left: buttonsDown[0, 1] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Down: buttonsDown[0, 2] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Up: buttonsDown[0, 3] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Start: buttonsDown[0, 4] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Select: buttonsDown[0, 5] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.B: buttonsDown[0, 6] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.A: buttonsDown[0, 7] = true; break;
-
-				case var value when value == AppEnvironment.Configuration.Controller2.Right: buttonsDown[1, 0] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Left: buttonsDown[1, 1] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Down: buttonsDown[1, 2] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Up: buttonsDown[1, 3] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Start: buttonsDown[1, 4] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Select: buttonsDown[1, 5] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.B: buttonsDown[1, 6] = true; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.A: buttonsDown[1, 7] = true; break;
-			}
+			if (e.Keycode == SDLKeyCode.Escape)
+				Exit();
 		}
 
 		public override void OnKeyUp(KeycodeEventArgs e)
 		{
+			HandleControllerInput(e, 0, configuration.Controller1);
+			HandleControllerInput(e, 1, configuration.Controller2);
+		}
+
+		private void HandleControllerInput(KeycodeEventArgs e, int index, ControllerConfiguration config)
+		{
+			var value = e.EventType == Hexa.NET.SDL2.SDLEventType.Keydown;
 			switch (e.Keycode)
 			{
-				case var value when value == AppEnvironment.Configuration.Controller1.Right: buttonsDown[0, 0] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Left: buttonsDown[0, 1] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Down: buttonsDown[0, 2] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Up: buttonsDown[0, 3] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Start: buttonsDown[0, 4] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.Select: buttonsDown[0, 5] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.B: buttonsDown[0, 6] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller1.A: buttonsDown[0, 7] = false; break;
-
-				case var value when value == AppEnvironment.Configuration.Controller2.Right: buttonsDown[1, 0] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Left: buttonsDown[1, 1] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Down: buttonsDown[1, 2] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Up: buttonsDown[1, 3] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Start: buttonsDown[1, 4] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.Select: buttonsDown[1, 5] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.B: buttonsDown[1, 6] = false; break;
-				case var value when value == AppEnvironment.Configuration.Controller2.A: buttonsDown[1, 7] = false; break;
+				case var key when key == config.Right: buttonsDown[index, 0] = value; break;
+				case var key when key == config.Left: buttonsDown[index, 1] = value; break;
+				case var key when key == config.Down: buttonsDown[index, 2] = value; break;
+				case var key when key == config.Up: buttonsDown[index, 3] = value; break;
+				case var key when key == config.Start: buttonsDown[index, 4] = value; break;
+				case var key when key == config.Select: buttonsDown[index, 5] = value; break;
+				case var key when key == config.B: buttonsDown[index, 6] = value; break;
+				case var key when key == config.A: buttonsDown[index, 7] = value; break;
 			}
 		}
 
@@ -125,7 +115,7 @@ namespace FamiSharp
 		{
 			frameTimeElapsed += e.Delta;
 
-			if (frameTimeElapsed >= 1.0 / 60.0988 || !AppEnvironment.Configuration.LimitFps)
+			if (frameTimeElapsed >= 1.0 / 60.0988 || !configuration.LimitFps)
 			{
 				if (isSystemRunning && !isEmulationPaused)
 				{
@@ -145,7 +135,7 @@ namespace FamiSharp
 				fpsStatusBarItem.ToolTip =
 					$"Emulator (avg): {averageFps.Average,8:0.00} FPS" + Environment.NewLine +
 					$"Emulator:       {framesPerSecond,8:0.00} FPS" + Environment.NewLine +
-					$"GUI:            {GuiFramerate,8:0.00} FPS" + Environment.NewLine +
+					$"Application:    {Framerate,8:0.00} FPS" + Environment.NewLine +
 					$"Emulation is {(isSystemRunning ? (isEmulationPaused ? "paused" : "running") : "stopped")}";
 			}
 		}
@@ -156,7 +146,7 @@ namespace FamiSharp
 			StatusBar.Draw(new StatusBarItem?[] { statusStatusBarItem, fpsStatusBarItem });
 
 			displayWindow.Draw(displayTexture);
-			aboutWindow.Draw(AppEnvironment.ApplicationInfo);
+			aboutWindow.Draw(ProductInformation);
 
 			cpuStatusWindow.Draw(nes);
 			cpuDisassemblyWindow.Draw(nes);
@@ -170,17 +160,17 @@ namespace FamiSharp
 		{
 			SaveCartridgeRam();
 
-			AppEnvironment.Configuration.DisplaySize = displayWindow.WindowScale;
-			AppEnvironment.Configuration.SaveToFile(AppEnvironment.ConfigurationFilename);
+			configuration.DisplaySize = displayWindow.WindowScale;
+			configuration.SaveToFile(ConfigurationPath);
 		}
 
 		private void ShowOpenRomDialog()
 		{
 			var (lastRomDirectory, lastRomFilename) = (string.Empty, string.Empty);
-			if (!string.IsNullOrEmpty(AppEnvironment.Configuration.LastRomLoaded))
+			if (!string.IsNullOrEmpty(configuration.LastRomLoaded))
 			{
-				lastRomDirectory = Path.GetDirectoryName(AppEnvironment.Configuration.LastRomLoaded);
-				lastRomFilename = Path.GetFileName(AppEnvironment.Configuration.LastRomLoaded);
+				lastRomDirectory = Path.GetDirectoryName(configuration.LastRomLoaded);
+				lastRomFilename = Path.GetFileName(configuration.LastRomLoaded);
 			}
 			if (openRomDialog.Open(out string? filename, lastRomDirectory, lastRomFilename) == DialogResult.Okay && filename != null)
 			{
@@ -208,8 +198,8 @@ namespace FamiSharp
 				if (statusStatusBarItem != null)
 					statusStatusBarItem.Label = $"Emulation started, running '{cartridgeFilename}'";
 
-				AppEnvironment.Configuration.LastRomLoaded = cartridgeFilename;
-				AppEnvironment.Configuration.SaveToFile(AppEnvironment.ConfigurationFilename);
+				configuration.LastRomLoaded = cartridgeFilename;
+				configuration.SaveToFile(ConfigurationPath);
 
 				isSystemRunning = true;
 			}
@@ -239,7 +229,7 @@ namespace FamiSharp
 
 			if (nes.Cartridge.Header.HasPersistantMemory)
 			{
-				var savePath = Path.Combine(AppEnvironment.SaveDataPath, cartSaveFilename);
+				var savePath = Path.Combine(saveDataPath, cartSaveFilename);
 
 				if (!File.Exists(savePath)) return;
 				var prgRam = File.ReadAllBytes(savePath);
@@ -260,7 +250,7 @@ namespace FamiSharp
 				for (var i = 0; i < Math.Min(0x2000, prgRam.Length); i++)
 					prgRam[i] = nes.Read((ushort)(0x6000 + i));
 
-				var savePath = Path.Combine(AppEnvironment.SaveDataPath, cartSaveFilename);
+				var savePath = Path.Combine(saveDataPath, cartSaveFilename);
 				File.WriteAllBytes(savePath, prgRam);
 			}
 		}

@@ -4,6 +4,7 @@ using Hexa.NET.ImGui.Backends.SDL2;
 using Hexa.NET.OpenGL;
 using Hexa.NET.SDL2;
 using HexaGen.Runtime;
+using System.Diagnostics;
 using SDLEvent = Hexa.NET.SDL2.SDLEvent;
 using SDLWindow = Hexa.NET.SDL2.SDLWindow;
 
@@ -18,40 +19,51 @@ namespace FamiSharp
 			errorSdlInitFailed = -1, errorCreateWindowFailed = -2, errorGlInitFailed = -3, errorImguiContextFailed = -4,
 			errorImguiImplSdl2Failed = -5, errorImguiImplGlFailed = -6, errorUnknownInitFailure = -69;
 
+		public static ProductInformation ProductInformation => ProductInformation.GetProductInfo();
+		public static string DataDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), ProductInformation.Name);
+
+		public virtual string Title
+		{
+			get;
+			set => SDL.SetWindowTitle(sdlWindow, field = value);
+		} = nameof(Application);
+
+		public virtual int Width
+		{
+			get;
+			set => SDL.SetWindowSize(sdlWindow, field = value, Height);
+		} = 640;
+
+		public virtual int Height
+		{
+			get;
+			set => SDL.SetWindowSize(sdlWindow, Width, field = value);
+		} = 480;
+
+		public int SwapInterval
+		{
+			get;
+			set => GL.SwapInterval(field = value);
+		}
+
+		public Vector3 BackgroundColor
+		{
+			get;
+			set { field = value; GL.ClearColor(value.X, value.Y, value.Z, 1f); }
+		} = new(0x3E / 255f, 0x4F / 255f, 0x65 / 255f); /* ❤️ 🧲 ❤️ */
+
+		public string ConfigurationFilename { get; set; } = "Config.json";
+
+		public string ConfigurationPath => Path.Combine(DataDirectory, ConfigurationFilename);
+
+		public float Framerate => guiIo.Framerate;
+
 		private static Lazy<GL>? gl;
 		public static GL GL => gl!.Value;
 
 		public event Action<KeycodeEventArgs>? KeyDown, KeyUp;
 		public event Action<DeltaTimeEventArgs>? Update, RenderApplication, RenderGUI;
-		public event Action? Shutdown;
-
-		string title = string.Empty;
-		int width = 640, height = 480;
-		Vector3 backgroundColor = Vector3.Zero;
-
-		public string Title
-		{
-			get => title;
-			set { if (initSdlSuccess) SDL.SetWindowTitle(sdlWindow, title = value); }
-		}
-
-		public int Width
-		{
-			get => width;
-			set { if (initSdlSuccess) SDL.SetWindowSize(sdlWindow, width = value, height); }
-		}
-
-		public int Height
-		{
-			get => height;
-			set { if (initSdlSuccess) SDL.SetWindowSize(sdlWindow, width, height = value); }
-		}
-
-		public Vector3 BackgroundColor
-		{
-			get => backgroundColor;
-			set => backgroundColor = value;
-		}
+		public event Action? Load, Shutdown;
 
 		SDLWindow* sdlWindow;
 		uint sdlWindowId;
@@ -60,19 +72,14 @@ namespace FamiSharp
 		ImGuiIOPtr guiIo;
 		ImGuiStylePtr guiStyle;
 
-		public float GuiFramerate => guiIo.Framerate;
-
 		bool initSdlSuccess, initOpenGlSuccess, initGuiSuccess, isRunning;
-
 		bool disposed;
 
-		public Application(string title, int width, int height, int swapInterval = 0)
+		public Application()
 		{
 			InitializeSDL();
-			InitializeOpenGL(swapInterval);
+			InitializeOpenGL();
 			InitializeImGui();
-
-			(Title, Width, Height) = (title, width, height);
 
 			SDL.SetWindowPosition(sdlWindow, (int)SDL.SDL_WINDOWPOS_CENTERED_MASK, (int)SDL.SDL_WINDOWPOS_CENTERED_MASK);
 			SDL.ShowWindow(sdlWindow);
@@ -81,6 +88,8 @@ namespace FamiSharp
 
 			if (!isRunning)
 				FatalError("Failed to initialize application", errorUnknownInitFailure);
+
+			OnLoad();
 		}
 
 		~Application()
@@ -132,7 +141,7 @@ namespace FamiSharp
 
 			SDL.SetHint(SDL.SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
-			sdlWindow = SDL.CreateWindow(title, 32, 32, width, height, windowFlags);
+			sdlWindow = SDL.CreateWindow(Title, 32, 32, Width, Height, windowFlags);
 			if (sdlWindow == null)
 				FatalError($"Failed to create SDL window: {SDL.GetErrorS()}", errorCreateWindowFailed);
 
@@ -141,7 +150,7 @@ namespace FamiSharp
 			initSdlSuccess = true;
 		}
 
-		private void InitializeOpenGL(int swapInterval)
+		private void InitializeOpenGL()
 		{
 			glContext = SDL.GLCreateContext(sdlWindow);
 			if (glContext.IsNull)
@@ -149,7 +158,8 @@ namespace FamiSharp
 
 			gl = new(() => new(new BindingsContext(sdlWindow, glContext)));
 
-			SDL.GLSetSwapInterval(swapInterval);
+			GL.ClearColor(BackgroundColor.X, BackgroundColor.Y, BackgroundColor.Z, 1f);
+			GL.SwapInterval(SwapInterval);
 
 			initOpenGlSuccess = true;
 		}
@@ -181,6 +191,7 @@ namespace FamiSharp
 			initGuiSuccess = true;
 		}
 
+		public virtual void OnLoad() => Load?.Invoke();
 		public virtual void OnKeyDown(KeycodeEventArgs e) => KeyDown?.Invoke(e);
 		public virtual void OnKeyUp(KeycodeEventArgs e) => KeyUp?.Invoke(e);
 		public virtual void OnUpdate(DeltaTimeEventArgs e) => Update?.Invoke(e);
@@ -203,11 +214,11 @@ namespace FamiSharp
 					break;
 
 				case (uint)SDLEventType.Keydown:
-					OnKeyDown(new KeycodeEventArgs((SDLKeyCode)e.Key.Keysym.Sym, (SDLKeymod)e.Key.Keysym.Mod));
+					OnKeyDown(new KeycodeEventArgs((SDLEventType)e.Key.Type, (SDLKeyCode)e.Key.Keysym.Sym, (SDLKeymod)e.Key.Keysym.Mod));
 					break;
 
 				case (uint)SDLEventType.Keyup:
-					OnKeyUp(new KeycodeEventArgs((SDLKeyCode)e.Key.Keysym.Sym, (SDLKeymod)e.Key.Keysym.Mod));
+					OnKeyUp(new KeycodeEventArgs((SDLEventType)e.Key.Type, (SDLKeyCode)e.Key.Keysym.Sym, (SDLKeymod)e.Key.Keysym.Mod));
 					break;
 			}
 		}
@@ -233,7 +244,6 @@ namespace FamiSharp
 				}
 
 				GL.MakeCurrent();
-				GL.ClearColor(BackgroundColor.X, BackgroundColor.Y, BackgroundColor.Z, 1f);
 				GL.Clear(GLClearBufferMask.ColorBufferBit | GLClearBufferMask.DepthBufferBit);
 
 				OnRenderApplication(new(guiIo.DeltaTime));
@@ -281,6 +291,21 @@ namespace FamiSharp
 		}
 	}
 
+	public sealed class ProductInformation(string name, string ver, string desc, string cpr)
+	{
+		public string Name { get; } = name;
+		public string Version { get; } = ver;
+		public string Description { get; } = desc;
+		public string Copyright { get; } = cpr;
+
+		internal static ProductInformation GetProductInfo()
+		{
+			if (string.IsNullOrEmpty(Environment.ProcessPath)) return new("Application Name", "0.0.0.0", "No description.", "No copyright.");
+			var fileVersionInfo = FileVersionInfo.GetVersionInfo(Environment.ProcessPath);
+			return new ProductInformation(fileVersionInfo.ProductName!, fileVersionInfo.ProductVersion!, fileVersionInfo.Comments!, fileVersionInfo.LegalCopyright!);
+		}
+	}
+
 	internal unsafe sealed class BindingsContext(SDLWindow* window, SDLGLContext context) : IGLContext
 	{
 		public nint Handle => (nint)window;
@@ -307,8 +332,9 @@ namespace FamiSharp
 		public double Delta { get; set; } = delta;
 	}
 
-	public class KeycodeEventArgs(SDLKeyCode keycode, SDLKeymod modifier) : EventArgs
+	public class KeycodeEventArgs(SDLEventType evtType, SDLKeyCode keycode, SDLKeymod modifier) : EventArgs
 	{
+		public SDLEventType EventType { get; set; } = evtType;
 		public SDLKeyCode Keycode { get; set; } = keycode;
 		public SDLKeymod Modifier { get; set; } = modifier;
 	}
