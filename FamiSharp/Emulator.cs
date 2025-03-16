@@ -142,7 +142,7 @@ namespace FamiSharp
 
 		public override void OnRenderGUI(DeltaTimeEventArgs e)
 		{
-			MainMenu.Draw(new MainMenuItem?[] { fileMenuItem, emulationMenuItem, debugMenuItem, optionsMenuItem, helpMenuItem });
+			MainMenu.Draw(new IMainMenuItem?[] { fileMenuItem, emulationMenuItem, debugMenuItem, optionsMenuItem, helpMenuItem });
 			StatusBar.Draw(new StatusBarItem?[] { statusStatusBarItem, fpsStatusBarItem });
 
 			displayWindow.Draw(displayTexture);
