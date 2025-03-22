@@ -7,7 +7,7 @@ using SDLKeyCode = Hexa.NET.SDL2.SDLKeyCode;
 
 namespace FamiSharp
 {
-	public partial class Emulator : Application
+	public partial class Emulator() : Application(new(3, 3))
 	{
 		const string saveDataDirectoryName = "Saves";
 
@@ -146,7 +146,7 @@ namespace FamiSharp
 			StatusBar.Draw(new StatusBarItem?[] { statusStatusBarItem, fpsStatusBarItem });
 
 			displayWindow.Draw(displayTexture);
-			aboutWindow.Draw(ProductInformation);
+			aboutWindow.Draw((ProductInformation, GLInfo));
 
 			cpuStatusWindow.Draw(nes);
 			cpuDisassemblyWindow.Draw(nes);

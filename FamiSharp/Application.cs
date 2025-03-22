@@ -5,6 +5,7 @@ using Hexa.NET.OpenGL;
 using Hexa.NET.SDL2;
 using HexaGen.Runtime;
 using System.Diagnostics;
+using System.Text;
 using SDLEvent = Hexa.NET.SDL2.SDLEvent;
 using SDLWindow = Hexa.NET.SDL2.SDLWindow;
 
@@ -61,6 +62,8 @@ namespace FamiSharp
 		private static Lazy<GL>? gl;
 		public static GL GL => gl!.Value;
 
+		public static GLInfo? GLInfo { get; private set; }
+
 		public event Action<KeycodeEventArgs>? KeyDown, KeyUp;
 		public event Action<DeltaTimeEventArgs>? Update, RenderApplication, RenderGUI;
 		public event Action? Load, Shutdown;
@@ -75,10 +78,10 @@ namespace FamiSharp
 		bool initSdlSuccess, initOpenGlSuccess, initGuiSuccess, isRunning;
 		bool disposed;
 
-		public Application()
+		public Application(Version? glVersion = default)
 		{
 			InitializeSDL();
-			InitializeOpenGL();
+			InitializeOpenGL(glVersion);
 			InitializeImGui();
 
 			SDL.SetWindowPosition(sdlWindow, (int)SDL.SDL_WINDOWPOS_CENTERED_MASK, (int)SDL.SDL_WINDOWPOS_CENTERED_MASK);
@@ -150,13 +153,35 @@ namespace FamiSharp
 			initSdlSuccess = true;
 		}
 
-		private void InitializeOpenGL()
+		private void InitializeOpenGL(Version? version = default)
 		{
+			if (version != default)
+			{
+				if ((version.Major != -1 && SDL.GLSetAttribute(SDLGLattr.GlContextMajorVersion, version.Major) < 0) || (version.Minor != -1 && SDL.GLSetAttribute(SDLGLattr.GlContextMinorVersion, version.Minor) < 0))
+					FatalError($"Failed to request OpenGL context version: {SDL.GetErrorS()}", errorGlInitFailed);
+			}
+
 			glContext = SDL.GLCreateContext(sdlWindow);
 			if (glContext.IsNull)
 				FatalError($"Failed to create OpenGL context: {SDL.GetErrorS()}", errorGlInitFailed);
 
+			if (version != default)
+			{
+				int attribMajorVersion = -1, attribMinorVersion = -1;
+				if (SDL.GLGetAttribute(SDLGLattr.GlContextMajorVersion, ref attribMajorVersion) < 0 || attribMajorVersion != version.Major || SDL.GLGetAttribute(SDLGLattr.GlContextMinorVersion, ref attribMinorVersion) < 0 || attribMinorVersion != version.Minor)
+					FatalError($"Failed to set OpenGL version attribute: {SDL.GetErrorS()}", errorGlInitFailed);
+			}
+
 			gl = new(() => new(new BindingsContext(sdlWindow, glContext)));
+			GLInfo = new GLInfo(gl.Value);
+
+			if (version != default)
+			{
+				GL.GetIntegerv(GLGetPName.MajorVersion, out int contextMajorVersion);
+				GL.GetIntegerv(GLGetPName.MinorVersion, out int contextMinorVersion);
+				if (contextMajorVersion != version.Major || contextMinorVersion != version.Minor)
+					FatalError($"Failed to set OpenGL context version: {SDL.GetErrorS()}", errorGlInitFailed);
+			}
 
 			GL.ClearColor(BackgroundColor.X, BackgroundColor.Y, BackgroundColor.Z, 1f);
 			GL.SwapInterval(SwapInterval);
@@ -324,6 +349,66 @@ namespace FamiSharp
 		{
 			procAddress = (nint)SDL.GLGetProcAddress(procName);
 			return procAddress != 0;
+		}
+	}
+
+	public unsafe sealed class GLInfo
+	{
+		const int maxStringLength = 512;
+
+		public string Renderer { get; private set; } = string.Empty;
+		public string Vendor { get; private set; } = string.Empty;
+		public string Version { get; private set; } = string.Empty;
+		public string ShadingLanguageVersion { get; private set; } = string.Empty;
+		public int NumExtensions { get; private set; }
+		public string[] Extensions { get; private set; } = [];
+		public int MajorVersion { get; private set; }
+		public int MinorVersion { get; private set; }
+		public int MaxTextureSize { get; private set; }
+
+		public GLInfo(GL gl)
+		{
+			Renderer = GetString(gl, GLStringName.Renderer);
+			Vendor = GetString(gl, GLStringName.Vendor);
+			Version = GetString(gl, GLStringName.Version);
+			ShadingLanguageVersion = GetString(gl, GLStringName.ShadingLanguageVersion);
+
+			var extensions = new List<string>();
+			NumExtensions = GetInteger(gl, GLGetPName.NumExtensions);
+			for (var i = 0; i < NumExtensions; i++)
+			{
+				var str = GetString(gl, GLStringName.Extensions, i);
+				if (!string.IsNullOrWhiteSpace(str)) extensions.Add(str);
+			}
+			Extensions = [.. extensions];
+
+			MajorVersion = GetInteger(gl, GLGetPName.MajorVersion);
+			MinorVersion = GetInteger(gl, GLGetPName.MinorVersion);
+			MaxTextureSize = GetInteger(gl, GLGetPName.MaxTextureSize);
+		}
+
+		private static string GetString(GL gl, GLStringName name, int index = -1)
+		{
+			var str = string.Empty;
+			var ptr = index != -1 ? gl.GetStringi(name, (uint)index) : gl.GetString(name);
+
+			if (ptr != null)
+			{
+				var len = 0;
+				for (var i = 0; i < maxStringLength; i++, len++)
+					if (ptr[i] == '\0')
+						break;
+
+				str = Encoding.UTF8.GetString(ptr, Math.Min(len, maxStringLength));
+			}
+
+			return str;
+		}
+
+		private static int GetInteger(GL gl, GLGetPName pname)
+		{
+			gl.GetIntegerv(pname, out int value);
+			return value;
 		}
 	}
 

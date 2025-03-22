@@ -113,7 +113,7 @@ namespace FamiSharp
 			{
 				if (e.Keycode == menuItem.Shortcut)
 				{
-					menuItem.ClickAction(menuItem);
+					menuItem.ClickAction?.Invoke(menuItem);
 					return true;
 				}
 			}
