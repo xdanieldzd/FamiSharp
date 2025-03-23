@@ -5,7 +5,7 @@ using Hexa.NET.OpenGL;
 using Hexa.NET.SDL2;
 using HexaGen.Runtime;
 using System.Diagnostics;
-using System.Text;
+using System.Runtime.InteropServices;
 using SDLEvent = Hexa.NET.SDL2.SDLEvent;
 using SDLWindow = Hexa.NET.SDL2.SDLWindow;
 
@@ -13,12 +13,15 @@ namespace FamiSharp
 {
 	public unsafe class Application : IDisposable
 	{
+		/* Hello, brand new world ... */
+
 		const uint initFlags = SDL.SDL_INIT_EVENTS | SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_AUDIO | SDL.SDL_INIT_GAMECONTROLLER;
 		const uint windowFlags = (uint)(SDLWindowFlags.Resizable | SDLWindowFlags.Opengl | SDLWindowFlags.Hidden);
 
 		const int
-			errorSdlInitFailed = -1, errorCreateWindowFailed = -2, errorGlInitFailed = -3, errorImguiContextFailed = -4,
-			errorImguiImplSdl2Failed = -5, errorImguiImplGlFailed = -6, errorUnknownInitFailure = -69;
+			errorSdlInitFailed = -1, errorCreateWindowFailed = -2, errorGlInitFailed = -3, errorGlVersionFailed = -4,
+			errorImguiContextFailed = -5, errorImguiImplSdl2Failed = -6, errorImguiImplGlFailed = -7,
+			errorUnknownInitFailure = -69;
 
 		public static ProductInformation ProductInformation => ProductInformation.GetProductInfo();
 		public static string DataDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), ProductInformation.Name);
@@ -92,6 +95,8 @@ namespace FamiSharp
 			if (!isRunning)
 				FatalError("Failed to initialize application", errorUnknownInitFailure);
 
+			/* Fire, fire, light the fire ... */
+
 			OnLoad();
 		}
 
@@ -126,7 +131,10 @@ namespace FamiSharp
 			}
 
 			if (initOpenGlSuccess)
+			{
 				GL.Dispose();
+				SDL.GLDeleteContext(glContext);
+			}
 
 			if (initSdlSuccess)
 			{
@@ -157,30 +165,21 @@ namespace FamiSharp
 		{
 			if (version != default)
 			{
-				if ((version.Major != -1 && SDL.GLSetAttribute(SDLGLattr.GlContextMajorVersion, version.Major) < 0) || (version.Minor != -1 && SDL.GLSetAttribute(SDLGLattr.GlContextMinorVersion, version.Minor) < 0))
-					FatalError($"Failed to request OpenGL context version: {SDL.GetErrorS()}", errorGlInitFailed);
+				SDL.GLSetAttribute(SDLGLattr.GlContextMajorVersion, version.Major);
+				SDL.GLSetAttribute(SDLGLattr.GlContextMinorVersion, version.Minor);
 			}
 
 			glContext = SDL.GLCreateContext(sdlWindow);
 			if (glContext.IsNull)
 				FatalError($"Failed to create OpenGL context: {SDL.GetErrorS()}", errorGlInitFailed);
 
-			if (version != default)
-			{
-				int attribMajorVersion = -1, attribMinorVersion = -1;
-				if (SDL.GLGetAttribute(SDLGLattr.GlContextMajorVersion, ref attribMajorVersion) < 0 || attribMajorVersion != version.Major || SDL.GLGetAttribute(SDLGLattr.GlContextMinorVersion, ref attribMinorVersion) < 0 || attribMinorVersion != version.Minor)
-					FatalError($"Failed to set OpenGL version attribute: {SDL.GetErrorS()}", errorGlInitFailed);
-			}
-
 			gl = new(() => new(new BindingsContext(sdlWindow, glContext)));
 			GLInfo = new GLInfo(gl.Value);
 
 			if (version != default)
 			{
-				GL.GetIntegerv(GLGetPName.MajorVersion, out int contextMajorVersion);
-				GL.GetIntegerv(GLGetPName.MinorVersion, out int contextMinorVersion);
-				if (contextMajorVersion != version.Major || contextMinorVersion != version.Minor)
-					FatalError($"Failed to set OpenGL context version: {SDL.GetErrorS()}", errorGlInitFailed);
+				if (GLInfo.ContextVersion != version)
+					FatalError($"Failed to set OpenGL context version: Requested {version}, got {GLInfo.ContextVersion}", errorGlVersionFailed);
 			}
 
 			GL.ClearColor(BackgroundColor.X, BackgroundColor.Y, BackgroundColor.Z, 1f);
@@ -307,11 +306,11 @@ namespace FamiSharp
 
 		private void FatalError(string error, int code)
 		{
-			ShowMessageBox("Fatal Error", $"{error}\nExit code {code}", SDLMessageBoxFlags.Error);
+			Console.WriteLine($"Fatal error! {error}");
 
+			ShowMessageBox("Fatal Error", $"{error}\n\nApplication will now exit; exit code {code}.", SDLMessageBoxFlags.Error);
 			SDL.Quit();
 
-			Console.WriteLine($"Fatal error: {error}");
 			Environment.Exit(code);
 		}
 	}
@@ -354,16 +353,13 @@ namespace FamiSharp
 
 	public unsafe sealed class GLInfo
 	{
-		const int maxStringLength = 512;
-
 		public string Renderer { get; private set; } = string.Empty;
 		public string Vendor { get; private set; } = string.Empty;
 		public string Version { get; private set; } = string.Empty;
 		public string ShadingLanguageVersion { get; private set; } = string.Empty;
 		public int NumExtensions { get; private set; }
 		public string[] Extensions { get; private set; } = [];
-		public int MajorVersion { get; private set; }
-		public int MinorVersion { get; private set; }
+		public Version ContextVersion { get; private set; }
 		public int MaxTextureSize { get; private set; }
 
 		public GLInfo(GL gl)
@@ -382,8 +378,7 @@ namespace FamiSharp
 			}
 			Extensions = [.. extensions];
 
-			MajorVersion = GetInteger(gl, GLGetPName.MajorVersion);
-			MinorVersion = GetInteger(gl, GLGetPName.MinorVersion);
+			ContextVersion = new(GetInteger(gl, GLGetPName.MajorVersion), GetInteger(gl, GLGetPName.MinorVersion));
 			MaxTextureSize = GetInteger(gl, GLGetPName.MaxTextureSize);
 		}
 
@@ -391,17 +386,8 @@ namespace FamiSharp
 		{
 			var str = string.Empty;
 			var ptr = index != -1 ? gl.GetStringi(name, (uint)index) : gl.GetString(name);
-
 			if (ptr != null)
-			{
-				var len = 0;
-				for (var i = 0; i < maxStringLength; i++, len++)
-					if (ptr[i] == '\0')
-						break;
-
-				str = Encoding.UTF8.GetString(ptr, Math.Min(len, maxStringLength));
-			}
-
+				str = Marshal.PtrToStringUTF8((nint)ptr) ?? string.Empty;
 			return str;
 		}
 

@@ -1,13 +1,19 @@
 ﻿using Hexa.NET.ImGui;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace FamiSharp.UserInterface
 {
-	public class AboutWindow : WindowBase
+	public unsafe class AboutWindow : WindowBase
 	{
 		public override string Title => "About";
 
+		readonly Process currentProcess;
+
 		bool showDebugInfo;
+
+		public AboutWindow() => currentProcess = Process.GetCurrentProcess();
 
 		protected override void DrawWindow(object? userData)
 		{
@@ -33,27 +39,39 @@ namespace FamiSharp.UserInterface
 			if (showDebugInfo)
 			{
 				var debugInfoBuilder = new StringBuilder();
-				debugInfoBuilder.AppendLine("System information");
-				debugInfoBuilder.AppendLine($"- OS Version:  {Environment.OSVersion}");
-				debugInfoBuilder.AppendLine($"- CLR Version: {Environment.Version}");
-				debugInfoBuilder.AppendLine($"- Working Set: {Environment.WorkingSet} bytes");
+				debugInfoBuilder.AppendLine("Application information:");
+				debugInfoBuilder.AppendLine($"- Process Name:           {currentProcess.ProcessName}");
+				debugInfoBuilder.AppendLine($"- Module Name:            {currentProcess.MainModule?.ModuleName}");
+				debugInfoBuilder.AppendLine($"- Handle:                 {currentProcess.Handle}");
+				debugInfoBuilder.AppendLine($"- Peak Working Set:       {currentProcess.PeakWorkingSet64} bytes");
+				debugInfoBuilder.AppendLine($"- Start Time:             {currentProcess.StartTime}");
+				debugInfoBuilder.AppendLine($"- Process Architecture:   {RuntimeInformation.ProcessArchitecture}");
+				debugInfoBuilder.AppendLine("- Dear ImGui information:");
+				debugInfoBuilder.AppendLine($" - Version:               {ImGui.GetVersionS()}");
+				debugInfoBuilder.AppendLine($" - Backend Platform Name: {Marshal.PtrToStringUTF8((nint)io.BackendPlatformName)}");
+				debugInfoBuilder.AppendLine($" - Backend Renderer Name: {Marshal.PtrToStringUTF8((nint)io.BackendRendererName)}");
 				debugInfoBuilder.AppendLine();
 
-				debugInfoBuilder.AppendLine("OpenGL information");
+				debugInfoBuilder.AppendLine("System information:");
+				debugInfoBuilder.AppendLine($"- OS Version:             {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}");
+				debugInfoBuilder.AppendLine($"- Framework Description:  {RuntimeInformation.FrameworkDescription}");
+				debugInfoBuilder.AppendLine($"- Runtime Identifier:     {RuntimeInformation.RuntimeIdentifier}");
+				debugInfoBuilder.AppendLine();
+
+				debugInfoBuilder.AppendLine("OpenGL information:");
 				debugInfoBuilder.AppendLine($"- Renderer:               {glInfo.Renderer}");
 				debugInfoBuilder.AppendLine($"- Vendor:                 {glInfo.Vendor}");
 				debugInfoBuilder.AppendLine($"- Version:                {glInfo.Version}");
 				debugInfoBuilder.AppendLine($"- ShadingLanguageVersion: {glInfo.ShadingLanguageVersion}");
+				debugInfoBuilder.AppendLine($"- Major/MinorVersion:     {glInfo.ContextVersion}");
 				debugInfoBuilder.AppendLine($"- MaxTextureSize:         {glInfo.MaxTextureSize}");
 
-				debugInfoBuilder.AppendLine("- Supported extensions");
+				debugInfoBuilder.AppendLine("- Supported extensions:");
 				foreach (var extension in glInfo.Extensions)
 					debugInfoBuilder.AppendLine($" - {extension}");
-				debugInfoBuilder.AppendLine();
 
 				var debugInfo = debugInfoBuilder.ToString() + '\0';
-				ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-				ImGui.InputTextMultiline("##debuginfo", ref debugInfo, (nuint)debugInfo.Length, ImGuiInputTextFlags.ReadOnly);
+				ImGui.InputTextMultiline("##debuginfo", ref debugInfo, (nuint)debugInfo.Length, new(ImGui.GetContentRegionAvail().X, 200f), ImGuiInputTextFlags.ReadOnly);
 			}
 			ImGui.NewLine();
 
