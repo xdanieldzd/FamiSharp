@@ -28,7 +28,7 @@ namespace FamiSharp
 
 		StatusBarItem? statusStatusBarItem, fpsStatusBarItem;
 
-		private void InitializeUI()
+		public override void OnInitializeGUI()
 		{
 			displayWindow.WindowScale = configuration.DisplaySize;
 
@@ -37,7 +37,8 @@ namespace FamiSharp
 
 			fileOpenMenuItem = new(
 				label: "Open ROM",
-				shortcut: SDLKeyCode.O,
+				shortcutMod: SDLKeymod.Ctrl,
+				shortcutKey: SDLKeyCode.O,
 				clickAction: (s) => { ShowOpenRomDialog(); });
 
 			fileExitMenuItem = new(
@@ -46,13 +47,15 @@ namespace FamiSharp
 
 			emulationPauseMenuItem = new(
 				label: "Pause",
-				shortcut: SDLKeyCode.P,
+				shortcutMod: SDLKeymod.Ctrl,
+				shortcutKey: SDLKeyCode.P,
 				clickAction: (s) => { isEmulationPaused = !isEmulationPaused; },
 				updateAction: (s) => { s.IsEnabled = isSystemRunning; (s as MainMenuTextItem)!.IsChecked = isEmulationPaused; });
 
 			emulationResetMenuItem = new(
 				label: "Reset",
-				shortcut: SDLKeyCode.R,
+				shortcutMod: SDLKeymod.Ctrl,
+				shortcutKey: SDLKeyCode.R,
 				clickAction: (s) => { nes?.Reset(); LoadCartridgeRam(); },
 				updateAction: (s) => { s.IsEnabled = isSystemRunning; });
 
@@ -78,6 +81,8 @@ namespace FamiSharp
 
 			optionsLimitFpsMenuItem = new(
 				label: "Limit FPS",
+				shortcutMod: SDLKeymod.None,
+				shortcutKey: SDLKeyCode.Tab,
 				clickAction: (s) => { configuration.LimitFps = !configuration.LimitFps; averageFps.Clear(); },
 				updateAction: (s) => { if (s is MainMenuTextItem textItem) textItem.IsChecked = configuration.LimitFps; });
 
@@ -99,7 +104,7 @@ namespace FamiSharp
 			optionsMenuItem = new("Options") { SubItems = [optionsLimitFpsMenuItem, MainMenuSeperatorItem.Default, optionsDisplaySizeMenuItem] };
 			helpMenuItem = new("Help") { SubItems = [helpAboutMenuItem] };
 
-			menuItemsWithShortcuts.AddRange([fileOpenMenuItem, emulationPauseMenuItem, emulationResetMenuItem]);
+			menuItemsWithShortcuts.AddRange([fileOpenMenuItem, emulationPauseMenuItem, emulationResetMenuItem, optionsLimitFpsMenuItem]);
 
 			statusStatusBarItem = new("Ready!") { ShowSeparator = false };
 			fpsStatusBarItem = new(string.Empty) { TextAlignment = StatusBarItemTextAlign.Center, ItemAlignment = StatusBarItemAlign.Right, Width = 80 };
@@ -107,11 +112,10 @@ namespace FamiSharp
 
 		private bool HandleMenuShortcuts(KeycodeEventArgs e)
 		{
-			if ((e.Modifier & SDLKeymod.Ctrl) == 0) return false;
-
 			foreach (var menuItem in menuItemsWithShortcuts)
 			{
-				if (e.Keycode == menuItem.Shortcut)
+				if ((menuItem.ShortcutModifier == SDLKeymod.None && e.Keycode == menuItem.ShortcutKey) ||
+					((e.Modifier & menuItem.ShortcutModifier) != 0 && e.Keycode == menuItem.ShortcutKey))
 				{
 					menuItem.ClickAction?.Invoke(menuItem);
 					return true;

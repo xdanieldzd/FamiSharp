@@ -43,7 +43,16 @@ namespace FamiSharp.UserInterface
 
 					if (mainMenuItem is MainMenuTextItem mainMenuTextItem)
 					{
-						if (ImGui.MenuItem(mainMenuTextItem.Label, mainMenuTextItem.Shortcut != SDLKeyCode.Unknown ? $"Ctrl+{mainMenuTextItem.Shortcut}" : string.Empty, mainMenuTextItem.IsChecked, mainMenuTextItem.IsEnabled) && mainMenuTextItem.ClickAction != null)
+						var shortcutPrefix = mainMenuTextItem.ShortcutModifier switch
+						{
+							SDLKeymod.Ctrl => "Ctrl",
+							SDLKeymod.Alt => "Alt",
+							SDLKeymod.Shift => "Shift",
+							_ => string.Empty
+						};
+						var shortcutString = mainMenuTextItem.ShortcutKey != SDLKeyCode.Unknown ? $"{(!string.IsNullOrWhiteSpace(shortcutPrefix) ? $"{shortcutPrefix}+" : string.Empty)}{mainMenuTextItem.ShortcutKey}" : string.Empty;
+
+						if (ImGui.MenuItem(mainMenuTextItem.Label, shortcutString, mainMenuTextItem.IsChecked, mainMenuTextItem.IsEnabled) && mainMenuTextItem.ClickAction != null)
 							mainMenuTextItem.ClickAction(mainMenuTextItem);
 					}
 					else if (mainMenuItem is MainMenuSliderItem mainMenuSliderItem)
@@ -78,10 +87,11 @@ namespace FamiSharp.UserInterface
 		public readonly static MainMenuSeperatorItem Default = new();
 	}
 
-	public sealed class MainMenuTextItem(string label = "Label", SDLKeyCode shortcut = SDLKeyCode.Unknown, Action<IMainMenuItem> clickAction = null!, Action<IMainMenuItem> updateAction = null!) : IMainMenuItem
+	public sealed class MainMenuTextItem(string label = "Label", SDLKeymod shortcutMod = SDLKeymod.None, SDLKeyCode shortcutKey = SDLKeyCode.Unknown, Action<IMainMenuItem> clickAction = null!, Action<IMainMenuItem> updateAction = null!) : IMainMenuItem
 	{
 		public string Label { get; set; } = label;
-		public SDLKeyCode Shortcut { get; set; } = shortcut;
+		public SDLKeymod ShortcutModifier { get; set; } = shortcutMod;
+		public SDLKeyCode ShortcutKey { get; set; } = shortcutKey;
 		public Action<IMainMenuItem>? ClickAction { get; set; } = clickAction;
 		public Action<IMainMenuItem>? UpdateAction { get; set; } = updateAction;
 		public IMainMenuItem[] SubItems { get; set; } = [];

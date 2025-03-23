@@ -69,7 +69,7 @@ namespace FamiSharp
 
 		public event Action<KeycodeEventArgs>? KeyDown, KeyUp;
 		public event Action<DeltaTimeEventArgs>? Update, RenderApplication, RenderGUI;
-		public event Action? Load, Shutdown;
+		public event Action? Load, InitializeGUI, Shutdown;
 
 		SDLWindow* sdlWindow;
 		uint sdlWindowId;
@@ -97,6 +97,7 @@ namespace FamiSharp
 
 			/* Fire, fire, light the fire ... */
 
+			OnInitializeGUI();
 			OnLoad();
 		}
 
@@ -216,6 +217,7 @@ namespace FamiSharp
 		}
 
 		public virtual void OnLoad() => Load?.Invoke();
+		public virtual void OnInitializeGUI() => InitializeGUI?.Invoke();
 		public virtual void OnKeyDown(KeycodeEventArgs e) => KeyDown?.Invoke(e);
 		public virtual void OnKeyUp(KeycodeEventArgs e) => KeyUp?.Invoke(e);
 		public virtual void OnUpdate(DeltaTimeEventArgs e) => Update?.Invoke(e);

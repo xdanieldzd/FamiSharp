@@ -29,9 +29,7 @@
 
 		public void Clear()
 		{
-			Array.Fill(frameTimes, 0);
 			lastIndex = 0;
-
 			Average = 0.0;
 		}
 	}
