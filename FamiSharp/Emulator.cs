@@ -35,11 +35,15 @@ namespace FamiSharp
 				configuration = Configuration.LoadFromFile(ConfigurationPath);
 				Directory.CreateDirectory(saveDataPath = Path.Combine(DataDirectory, saveDataDirectoryName));
 
-				nes = new();
+				nes = new(AudioHandler.SampleRate);
 				nes.Ppu.LoadPalette(File.ReadAllBytes(@"Assets\2C02G_wiki.pal")); /* https://www.nesdev.org/w/index.php?title=File:2C02G_wiki.pal&oldid=22304 */
 				nes.Ppu.TransferFramebuffer += (s, e) =>
 				{
 					displayTexture?.Update(e.Data);
+				};
+				nes.Apu.TransferSamples += (s, e) =>
+				{
+					AudioHandler.Output(e.Samples);
 				};
 				nes.RequestInput += (s, e) =>
 				{

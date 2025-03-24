@@ -6,6 +6,7 @@ namespace FamiSharp.Emulation
 	{
 		public NesCpu Cpu { get; private set; }
 		public Ppu.Ppu Ppu { get; private set; }
+		public Apu.Apu Apu { get; private set; }
 		public byte[] InternalRam { get; private set; }
 		public Cartridge? Cartridge { get; private set; }
 
@@ -20,10 +21,11 @@ namespace FamiSharp.Emulation
 
 		readonly bool isReady;
 
-		public NesSystem()
+		public NesSystem(int sampleRate)
 		{
 			Cpu = new(this);
 			Ppu = new(this);
+			Apu = new(sampleRate);
 
 			InternalRam = new byte[0x0800];
 
@@ -39,6 +41,7 @@ namespace FamiSharp.Emulation
 		{
 			Cpu.Reset();
 			Ppu.Reset();
+			Apu.Reset();
 			Array.Clear(InternalRam);
 
 			OamDma = OamDma.Empty;
@@ -57,6 +60,8 @@ namespace FamiSharp.Emulation
 			if (!isReady) return false;
 
 			var frameComplete = Ppu.Tick();
+
+			Apu.Tick();
 
 			if ((Ticks % 3) == 0)
 			{
@@ -121,6 +126,8 @@ namespace FamiSharp.Emulation
 					value = (byte)((controllerState[address & 0x0001] >> 7) & 0b1);
 					controllerState[address & 0x0001] <<= 1;
 				}
+				else if (address == 0x4015)
+					value = Apu.ExternalRead((ushort)(address & 0x001F));
 			}
 			return value;
 		}
@@ -137,11 +144,14 @@ namespace FamiSharp.Emulation
 					Ppu.ExternalWrite((ushort)(address & 0x0007), value);
 				else if (address == 0x4014)
 					OamDma = new() { Page = value, Address = 0, InProgress = true, Data = OamDma.Data, Dummy = OamDma.Dummy };
-				else if (address >= 0x4016 && address < 0x4018)
+				else if (address == 0x4016)
 				{
 					RequestInput?.Invoke(this, inputEventArgs);
-					controllerState[address & 0x0001] = inputEventArgs.ControllerData[address & 0x0001];
+					controllerState[0] = inputEventArgs.ControllerData[0];
+					controllerState[1] = inputEventArgs.ControllerData[1];
 				}
+				else if (address >= 0x4000 && address < 0x4018)
+					Apu.ExternalWrite((ushort)(address & 0x001F), value);
 			}
 		}
 	}

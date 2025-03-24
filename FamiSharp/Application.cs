@@ -1,4 +1,5 @@
-﻿using Hexa.NET.ImGui;
+﻿using FamiSharp.Utilities;
+using Hexa.NET.ImGui;
 using Hexa.NET.ImGui.Backends.OpenGL3;
 using Hexa.NET.ImGui.Backends.SDL2;
 using Hexa.NET.OpenGL;
@@ -18,10 +19,19 @@ namespace FamiSharp
 		const uint initFlags = SDL.SDL_INIT_EVENTS | SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_AUDIO | SDL.SDL_INIT_GAMECONTROLLER;
 		const uint windowFlags = (uint)(SDLWindowFlags.Resizable | SDLWindowFlags.Opengl | SDLWindowFlags.Hidden);
 
-		const int
-			errorSdlInitFailed = -1, errorCreateWindowFailed = -2, errorGlInitFailed = -3, errorGlVersionFailed = -4,
-			errorImguiContextFailed = -5, errorImguiImplSdl2Failed = -6, errorImguiImplGlFailed = -7,
-			errorUnknownInitFailure = -69;
+		enum ExitCodes : int
+		{
+			NoError = 0,
+			SdlInitFailed = -1,
+			CreateWindowFailed = -2,
+			AudioHandlerInitFailed = -3,
+			GlInitFailed = -4,
+			GlVersionFailed = -5,
+			ImGuiContextFailed = -6,
+			ImGuiImplSdl2Failed = -7,
+			ImGuiImplGlFailed = -8,
+			UnknownFailure = -69
+		}
 
 		public static ProductInformation ProductInformation => ProductInformation.GetProductInfo();
 		public static string DataDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), ProductInformation.Name);
@@ -61,6 +71,7 @@ namespace FamiSharp
 		public string ConfigurationPath => Path.Combine(DataDirectory, ConfigurationFilename);
 
 		public float Framerate => guiIo.Framerate;
+		public AudioHandler AudioHandler { get; private set; } = new();
 
 		private static Lazy<GL>? gl;
 		public static GL GL => gl!.Value;
@@ -93,7 +104,7 @@ namespace FamiSharp
 			isRunning = initSdlSuccess && initOpenGlSuccess && initGuiSuccess;
 
 			if (!isRunning)
-				FatalError("Failed to initialize application", errorUnknownInitFailure);
+				FatalError("Failed to initialize application", (int)ExitCodes.UnknownFailure);
 
 			/* Fire, fire, light the fire ... */
 
@@ -120,6 +131,8 @@ namespace FamiSharp
 			if (disposing)
 			{
 				/* Dispose managed resources */
+
+				AudioHandler.Dispose();
 			}
 
 			/* Free unmanaged resources */
@@ -149,15 +162,18 @@ namespace FamiSharp
 		private void InitializeSDL()
 		{
 			if (SDL.Init(initFlags) != 0)
-				FatalError($"Failed to initialize SDL: {SDL.GetErrorS()}", errorSdlInitFailed);
+				FatalError($"Failed to initialize SDL: {SDL.GetErrorS()}", (int)ExitCodes.SdlInitFailed);
 
 			SDL.SetHint(SDL.SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
 			sdlWindow = SDL.CreateWindow(Title, 32, 32, Width, Height, windowFlags);
 			if (sdlWindow == null)
-				FatalError($"Failed to create SDL window: {SDL.GetErrorS()}", errorCreateWindowFailed);
+				FatalError($"Failed to create SDL window: {SDL.GetErrorS()}", (int)ExitCodes.CreateWindowFailed);
 
 			sdlWindowId = SDL.GetWindowID(sdlWindow);
+
+			if (!AudioHandler.Initialize(2, 44100, 1024))
+				FatalError($"Failed to initialize audio handler: {SDL.GetErrorS()}", (int)ExitCodes.AudioHandlerInitFailed);
 
 			initSdlSuccess = true;
 		}
@@ -172,7 +188,7 @@ namespace FamiSharp
 
 			glContext = SDL.GLCreateContext(sdlWindow);
 			if (glContext.IsNull)
-				FatalError($"Failed to create OpenGL context: {SDL.GetErrorS()}", errorGlInitFailed);
+				FatalError($"Failed to create OpenGL context: {SDL.GetErrorS()}", (int)ExitCodes.GlInitFailed);
 
 			gl = new(() => new(new BindingsContext(sdlWindow, glContext)));
 			GLInfo = new GLInfo(gl.Value);
@@ -180,7 +196,7 @@ namespace FamiSharp
 			if (version != default)
 			{
 				if (GLInfo.ContextVersion != version)
-					FatalError($"Failed to set OpenGL context version: Requested {version}, got {GLInfo.ContextVersion}", errorGlVersionFailed);
+					FatalError($"Failed to set OpenGL context version: Requested {version}, got {GLInfo.ContextVersion}", (int)ExitCodes.GlVersionFailed);
 			}
 
 			GL.ClearColor(BackgroundColor.X, BackgroundColor.Y, BackgroundColor.Z, 1f);
@@ -193,7 +209,7 @@ namespace FamiSharp
 		{
 			guiContext = ImGui.CreateContext();
 			if (guiContext.IsNull)
-				FatalError("Failed to create ImGui context", errorImguiContextFailed);
+				FatalError("Failed to create ImGui context", (int)ExitCodes.ImGuiContextFailed);
 
 			ImGui.SetCurrentContext(guiContext);
 
@@ -207,11 +223,11 @@ namespace FamiSharp
 
 			ImGuiImplSDL2.SetCurrentContext(guiContext);
 			if (!ImGuiImplSDL2.InitForOpenGL(new SDLWindowPtr((Hexa.NET.ImGui.Backends.SDL2.SDLWindow*)sdlWindow), (void*)glContext.Handle))
-				FatalError("Failed to initialize ImGui Impl SDL2", errorImguiImplSdl2Failed);
+				FatalError("Failed to initialize ImGui Impl SDL2", (int)ExitCodes.ImGuiImplSdl2Failed);
 
 			ImGuiImplOpenGL3.SetCurrentContext(guiContext);
 			if (!ImGuiImplOpenGL3.Init((byte*)null))
-				FatalError("Failed to initialize ImGui Impl OpenGL3", errorImguiImplGlFailed);
+				FatalError("Failed to initialize ImGui Impl OpenGL3", (int)ExitCodes.ImGuiImplGlFailed);
 
 			initGuiSuccess = true;
 		}
