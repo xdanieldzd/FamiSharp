@@ -3,7 +3,6 @@ using FamiSharp.Emulation.Cartridges;
 using FamiSharp.UserInterface;
 using FamiSharp.Utilities;
 using NativeFileDialogNET;
-using SDLKeyCode = Hexa.NET.SDL2.SDLKeyCode;
 
 namespace FamiSharp
 {
@@ -37,14 +36,8 @@ namespace FamiSharp
 
 				nes = new(AudioHandler.SampleRate);
 				nes.Ppu.LoadPalette(File.ReadAllBytes(@"Assets\2C02G_wiki.pal")); /* https://www.nesdev.org/w/index.php?title=File:2C02G_wiki.pal&oldid=22304 */
-				nes.Ppu.TransferFramebuffer += (s, e) =>
-				{
-					displayTexture?.Update(e.Data);
-				};
-				nes.Apu.TransferSamples += (s, e) =>
-				{
-					AudioHandler.Output(e.Samples);
-				};
+				nes.Ppu.TransferFramebuffer += (s, e) => displayTexture?.Update(e.Data);
+				nes.Apu.TransferSamples += (s, e) => AudioHandler.Output(e.Samples);
 				nes.RequestInput += (s, e) =>
 				{
 					if (!displayWindow.IsFocused) return;
@@ -61,7 +54,7 @@ namespace FamiSharp
 					}
 				};
 
-				displayTexture = new(256, 240);
+				displayTexture = new(GL, 256, 240);
 
 				if (GlobalVariables.IsAuthorsMachine)
 				{
@@ -86,9 +79,6 @@ namespace FamiSharp
 
 			HandleControllerInput(e, 0, configuration.Controller1);
 			HandleControllerInput(e, 1, configuration.Controller2);
-
-			if (e.Keycode == SDLKeyCode.Escape)
-				Exit();
 		}
 
 		public override void OnKeyUp(KeycodeEventArgs e)

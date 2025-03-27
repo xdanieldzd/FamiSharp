@@ -1,4 +1,5 @@
 ﻿using Hexa.NET.ImGui;
+using System.Numerics;
 
 namespace FamiSharp.UserInterface
 {

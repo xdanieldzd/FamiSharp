@@ -1,6 +1,7 @@
 ﻿using FamiSharp.Emulation;
 using Hexa.NET.ImGui;
 using Hexa.NET.OpenGL;
+using System.Numerics;
 
 namespace FamiSharp.UserInterface
 {
@@ -36,7 +37,7 @@ namespace FamiSharp.UserInterface
 		(int pt, int x, int y) hoveredTile = (-1, -1, -1), selectedTile = (0, 0, 0);
 		int patternArrangementIdx, paletteIdx;
 
-		bool updateRequired;
+		bool updateRequired = true;
 
 		readonly byte[][] patternTablesTextureData = new byte[numPatternTables][];
 		readonly OpenGLTexture[] patternTableTextures = new OpenGLTexture[numPatternTables];
@@ -57,7 +58,7 @@ namespace FamiSharp.UserInterface
 				patternTablesTextureData[i] = new byte[patternTableSize.x * 8 * patternTableSize.y * 8 * 4];
 				Array.Fill<byte>(patternTablesTextureData[i], 0xFF);
 
-				patternTableTextures[i] = new(patternTableSize.x * 8, patternTableSize.y * 8);
+				patternTableTextures[i] = new(Application.GL, patternTableSize.x * 8, patternTableSize.y * 8);
 				patternTableTextures[i].SetTextureFilter(GLTextureMinFilter.Nearest, GLTextureMagFilter.Nearest);
 				patternTableTextures[i].SetTextureWrapMode(GLTextureWrapMode.Repeat, GLTextureWrapMode.Repeat);
 			}
@@ -104,7 +105,7 @@ namespace FamiSharp.UserInterface
 						{
 							var tilePos = imagePos + new Vector2(x * 8f * zoom, y * 8f * zoom);
 							var isHovering = ImGui.IsMouseHoveringRect(tilePos, tilePos + tileSize);
-							if (isHovering)
+							if (IsFocused && isHovering)
 							{
 								hoveredTile = (i, x, y);
 								if (ImGuiP.IsMouseDown(ImGuiMouseButton.Left))

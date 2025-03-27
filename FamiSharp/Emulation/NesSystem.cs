@@ -59,6 +59,8 @@ namespace FamiSharp.Emulation
 		{
 			if (!isReady) return false;
 
+			/* "Digitally recreate everything ..." */
+
 			var frameComplete = Ppu.Tick();
 
 			Apu.Tick();

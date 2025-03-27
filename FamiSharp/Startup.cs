@@ -1,13 +1,7 @@
-﻿global using System.Numerics;
-
-namespace FamiSharp
+﻿namespace FamiSharp
 {
 	public static class Startup
 	{
-		static void Main()
-		{
-			var emulator = new Emulator();
-			emulator.Run();
-		}
+		static void Main() => new Emulator() { EscToExit = true }.Run();
 	}
 }
