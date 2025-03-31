@@ -59,11 +59,13 @@ namespace FamiSharp
 				if (GlobalVariables.IsAuthorsMachine)
 				{
 					if (GlobalVariables.IsDebugBuild)
+					{
 						LoadAndRunCartridge(configuration.LastRomLoaded);
 
-					cpuStatusWindow.IsWindowOpen = true;
-					cpuDisassemblyWindow.IsWindowOpen = true;
-					patternTableWindow.IsWindowOpen = true;
+						cpuStatusWindow.IsWindowOpen = true;
+						cpuDisassemblyWindow.IsWindowOpen = true;
+						patternTableWindow.IsWindowOpen = true;
+					}
 				}
 			}
 			catch (Exception e)

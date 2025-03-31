@@ -94,7 +94,7 @@
 
 		private short GenerateSample(int sampleNumber)
 		{
-			return GenTestSineWave(2500, sampleNumber, sampleRate);
+			return GlobalVariables.OutputApuSineTest ? GenTestSineWave(2500, sampleNumber, sampleRate) : (short)0;
 		}
 	}
 

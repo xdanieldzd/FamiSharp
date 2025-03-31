@@ -35,7 +35,7 @@
     <PackageReference Include="Hexa.NET.ImGui.Backends.SDL2" Version="1.0.14" />
     <PackageReference Include="Hexa.NET.OpenGL3" Version="1.1.0" />
     <PackageReference Include="Hexa.NET.SDL2" Version="1.2.13" />
-    <PackageReference Include="Hexa.NET.Utilities" Version="2.2.1" />
+    <PackageReference Include="Hexa.NET.Utilities" Version="2.2.2" />
     <PackageReference Include="NativeFileDialogNET" Version="2.0.2" />
   </ItemGroup>
 
