@@ -1,7 +1,7 @@
-﻿using Hexa.NET.ImGui;
+﻿using FamiSharp.Utilities;
+using Hexa.NET.ImGui;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace FamiSharp.UserInterface
 {
@@ -11,9 +11,15 @@ namespace FamiSharp.UserInterface
 
 		readonly Process currentProcess;
 
+		readonly List<string> debugInfo = [];
+		readonly ImGuiTextSelect textSelect;
 		bool showDebugInfo;
 
-		public AboutWindow() => currentProcess = Process.GetCurrentProcess();
+		public AboutWindow()
+		{
+			currentProcess = Process.GetCurrentProcess();
+			textSelect = new((idx) => debugInfo[idx], () => debugInfo.Count);
+		}
 
 		protected override void DrawWindow(object? userData)
 		{
@@ -22,7 +28,7 @@ namespace FamiSharp.UserInterface
 			var io = ImGui.GetIO();
 
 			ImGui.SetNextWindowPos(new(io.DisplaySize.X * 0.5f, io.DisplaySize.Y * 0.5f), ImGuiCond.Always, new(0.5f, 0.5f));
-			if (!ImGui.Begin(Title, ref windowOpen, ImGuiWindowFlags.NoCollapse))
+			if (!ImGui.Begin(Title, ref windowOpen, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
 			{
 				ImGui.End();
 				return;
@@ -38,41 +44,61 @@ namespace FamiSharp.UserInterface
 			ImGui.Checkbox("Show debug information", ref showDebugInfo);
 			if (showDebugInfo)
 			{
-				var debugInfoBuilder = new StringBuilder();
-				debugInfoBuilder.AppendLine("Application information:");
-				debugInfoBuilder.AppendLine($"- Process Name:           {currentProcess.ProcessName}");
-				debugInfoBuilder.AppendLine($"- Module Name:            {currentProcess.MainModule?.ModuleName}");
-				debugInfoBuilder.AppendLine($"- Handle:                 {currentProcess.Handle}");
-				debugInfoBuilder.AppendLine($"- Peak Working Set:       {currentProcess.PeakWorkingSet64} bytes");
-				debugInfoBuilder.AppendLine($"- Start Time:             {currentProcess.StartTime}");
-				debugInfoBuilder.AppendLine($"- Process Architecture:   {RuntimeInformation.ProcessArchitecture}");
-				debugInfoBuilder.AppendLine("- Dear ImGui information:");
-				debugInfoBuilder.AppendLine($" - Version:               {ImGui.GetVersionS()}");
-				debugInfoBuilder.AppendLine($" - Backend Platform Name: {Marshal.PtrToStringUTF8((nint)io.BackendPlatformName)}");
-				debugInfoBuilder.AppendLine($" - Backend Renderer Name: {Marshal.PtrToStringUTF8((nint)io.BackendRendererName)}");
-				debugInfoBuilder.AppendLine();
+				if (debugInfo.Count == 0)
+				{
+					//debugInfo.Add("THIS IS A LOOOOOOOONG LINE!!! THIS IS A LOOOOOOOONG LINE!!! THIS IS A LOOOOOOOONG LINE!!! THIS IS A LOOOOOOOONG LINE!!! THIS IS A LOOOOOOOONG LINE!!!");
+					debugInfo.Add("Application information:");
+					debugInfo.Add($"- Process Name:           {currentProcess.ProcessName}");
+					debugInfo.Add($"- Module Name:            {currentProcess.MainModule?.ModuleName}");
+					debugInfo.Add($"- Handle:                 {currentProcess.Handle}");
+					debugInfo.Add($"- Peak Working Set:       {currentProcess.PeakWorkingSet64} bytes");
+					debugInfo.Add($"- Start Time:             {currentProcess.StartTime}");
+					debugInfo.Add($"- Process Architecture:   {RuntimeInformation.ProcessArchitecture}");
+					debugInfo.Add("- Dear ImGui information:");
+					debugInfo.Add($" - Version:               {ImGui.GetVersionS()}");
+					debugInfo.Add($" - Backend Platform Name: {Marshal.PtrToStringUTF8((nint)io.BackendPlatformName)}");
+					debugInfo.Add($" - Backend Renderer Name: {Marshal.PtrToStringUTF8((nint)io.BackendRendererName)}");
+					debugInfo.Add(Environment.NewLine);
 
-				debugInfoBuilder.AppendLine("System information:");
-				debugInfoBuilder.AppendLine($"- OS Version:             {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}");
-				debugInfoBuilder.AppendLine($"- Framework Description:  {RuntimeInformation.FrameworkDescription}");
-				debugInfoBuilder.AppendLine($"- Runtime Identifier:     {RuntimeInformation.RuntimeIdentifier}");
-				debugInfoBuilder.AppendLine();
+					debugInfo.Add("System information:");
+					debugInfo.Add($"- OS Version:             {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}");
+					debugInfo.Add($"- Framework Description:  {RuntimeInformation.FrameworkDescription}");
+					debugInfo.Add($"- Runtime Identifier:     {RuntimeInformation.RuntimeIdentifier}");
+					debugInfo.Add(Environment.NewLine);
 
-				debugInfoBuilder.AppendLine("OpenGL information:");
-				debugInfoBuilder.AppendLine($"- Renderer:               {glInfo.Renderer}");
-				debugInfoBuilder.AppendLine($"- Vendor:                 {glInfo.Vendor}");
-				debugInfoBuilder.AppendLine($"- Version:                {glInfo.Version}");
-				debugInfoBuilder.AppendLine($"- ShadingLanguageVersion: {glInfo.ShadingLanguageVersion}");
-				debugInfoBuilder.AppendLine($"- Major/MinorVersion:     {glInfo.ContextVersion}");
-				debugInfoBuilder.AppendLine($"- MaxTextureSize:         {glInfo.MaxTextureSize}");
+					debugInfo.Add("OpenGL information:");
+					debugInfo.Add($"- Renderer:               {glInfo.Renderer}");
+					debugInfo.Add($"- Vendor:                 {glInfo.Vendor}");
+					debugInfo.Add($"- Version:                {glInfo.Version}");
+					debugInfo.Add($"- ShadingLanguageVersion: {glInfo.ShadingLanguageVersion}");
+					debugInfo.Add($"- Major/MinorVersion:     {glInfo.ContextVersion}");
+					debugInfo.Add($"- MaxTextureSize:         {glInfo.MaxTextureSize}");
+					debugInfo.Add("- Supported extensions:");
+					foreach (var extension in glInfo.Extensions) debugInfo.Add($" - {extension}");
+				}
 
-				debugInfoBuilder.AppendLine("- Supported extensions:");
-				foreach (var extension in glInfo.Extensions)
-					debugInfoBuilder.AppendLine($" - {extension}");
+				if (ImGui.BeginChild("##debuginfo",
+					ImGuiChildFlags.ResizeY | ImGuiChildFlags.FrameStyle,
+					ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove))
+				{
+					textSelect.Update();
 
-				var debugInfo = debugInfoBuilder.ToString() + '\0';
-				ImGui.InputTextMultiline("##debuginfo", ref debugInfo, (nuint)debugInfo.Length, new(ImGui.GetContentRegionAvail().X, 200f), ImGuiInputTextFlags.ReadOnly);
+					if (ImGui.BeginPopupContextWindow())
+					{
+						ImGui.BeginDisabled(!textSelect.HasSelection());
+						if (ImGui.MenuItem("Copy", "Ctrl+C")) textSelect.Copy();
+						ImGui.EndDisabled();
+
+						if (ImGui.MenuItem("Select All", "Ctrl+A")) textSelect.SelectAll();
+
+						ImGui.EndPopup();
+					}
+
+					foreach (var line in debugInfo) ImGui.TextUnformatted(line);
+				}
+				ImGui.EndChild();
 			}
+
 			ImGui.NewLine();
 
 			if (ImGui.Button("Close", new(ImGui.GetContentRegionAvail().X, 0f))) IsWindowOpen = false;
