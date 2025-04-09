@@ -1,12 +1,11 @@
-﻿using FamiSharp.Utilities;
-using Hexa.NET.ImGui;
+﻿using Hexa.NET.ImGui;
 using Hexa.NET.ImGui.Backends.OpenGL3;
 using Hexa.NET.ImGui.Backends.SDL2;
 using Hexa.NET.OpenGL;
 using Hexa.NET.SDL2;
 using HexaGen.Runtime;
-using System.Diagnostics;
 using System.Numerics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using SDLEvent = Hexa.NET.SDL2.SDLEvent;
 using SDLWindow = Hexa.NET.SDL2.SDLWindow;
@@ -18,68 +17,69 @@ namespace FamiSharp
 		/* "Hello, brand new world ..." */
 
 		const uint initFlags = SDL.SDL_INIT_EVENTS | SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_AUDIO | SDL.SDL_INIT_GAMECONTROLLER;
-		const uint windowFlags = (uint)(SDLWindowFlags.Resizable | SDLWindowFlags.Opengl | SDLWindowFlags.Hidden);
 
 		enum ExitCode : int
 		{
 			NoError = 0,
-			SdlInitFailed = -1,
-			CreateWindowFailed = -2,
-			AudioHandlerInitFailed = -3,
-			GlInitFailed = -4,
-			GlVersionFailed = -5,
-			ImGuiContextFailed = -6,
-			ImGuiImplSdl2Failed = -7,
-			ImGuiImplGlFailed = -8,
-			UnknownFailure = -69
+			SdlInitFailed = NoError - 1,
+			CreateWindowFailed = SdlInitFailed - 1,
+			GlInitFailed = CreateWindowFailed - 1,
+			GlVersionFailed = GlInitFailed - 1,
+			ImGuiContextFailed = GlVersionFailed - 1,
+			ImGuiImplSdl2Failed = ImGuiContextFailed - 1,
+			ImGuiImplGlFailed = ImGuiImplSdl2Failed - 1,
+			UnknownFailure = -64
 		}
 
-		public static ProductInformation ProductInformation => ProductInformation.GetProductInfo();
-		public static string DataDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), ProductInformation.Name);
+		internal readonly ApplicationSettings initialAppSettings;
 
-		public virtual string Title
+		string title = nameof(Application);
+		public string Title
 		{
-			get;
-			set => SDL.SetWindowTitle(sdlWindow, field = value);
-		} = nameof(Application);
+			get => title;
+			set => SDL.SetWindowTitle(sdlWindow, title = value);
+		}
 
-		public virtual int Width
+		(int width, int height) clientSize = (640, 480);
+		public (int Width, int Height) ClientSize
 		{
-			get;
-			set => SDL.SetWindowSize(sdlWindow, field = value, Height);
-		} = 640;
+			get => clientSize;
+			set
+			{
+				clientSize = value;
+				SDL.SetWindowSize(sdlWindow, value.Width, value.Height);
+			}
+		}
 
-		public virtual int Height
-		{
-			get;
-			set => SDL.SetWindowSize(sdlWindow, Width, field = value);
-		} = 480;
-
+		int swapInterval = 1;
 		public int SwapInterval
 		{
-			get;
-			set => GL.SwapInterval(field = value);
+			get => swapInterval;
+			set => GL.SwapInterval(swapInterval = value);
 		}
 
-		public Vector3 BackgroundColor
+		Vector3 clearColor = Vector3.Zero;
+		public Vector3 ClearColor
 		{
-			get;
-			set { field = value; GL.ClearColor(value.X, value.Y, value.Z, 1f); }
-		} = new(0x3E / 255f, 0x4F / 255f, 0x65 / 255f); /* ❤️ 🧲 ❤️ */
+			get => clearColor;
+			set
+			{
+				clearColor = value;
+				GL.ClearColor(value.X, value.Y, value.Z, 1f);
+			}
+		}
 
-		public bool EscToExit { get; set; }
-
-		public string ConfigurationFilename { get; set; } = "Config.json";
-
-		public string ConfigurationPath => Path.Combine(DataDirectory, ConfigurationFilename);
+		bool escToExit;
+		public bool EscToExit
+		{
+			get => escToExit;
+			set => escToExit = value;
+		}
 
 		public float Framerate => guiIo.Framerate;
-		public AudioHandler AudioHandler { get; private set; } = new();
 
 		private static Lazy<GL>? gl;
 		public static GL GL => gl!.Value;
-
-		public static GLInfo? GLInfo { get; private set; }
 
 		public event Action<KeycodeEventArgs>? KeyDown, KeyUp;
 		public event Action<DeltaTimeEventArgs>? Update, RenderApplication, RenderGUI;
@@ -87,6 +87,7 @@ namespace FamiSharp
 
 		SDLWindow* sdlWindow;
 		uint sdlWindowId;
+		SDLSurface iconSdlSurface;
 		SDLGLContext glContext;
 		ImGuiContextPtr guiContext;
 		ImGuiIOPtr guiIo;
@@ -95,11 +96,35 @@ namespace FamiSharp
 		bool initSdlSuccess, initOpenGlSuccess, initGuiSuccess, isRunning;
 		bool disposed;
 
-		public Application(Version? glVersion = default)
+		public Application(ApplicationSettings applicationSettings)
 		{
-			InitializeSDL();
-			InitializeOpenGL(glVersion);
+			initialAppSettings = applicationSettings;
+
+			title = initialAppSettings.Title;
+			clientSize = initialAppSettings.ClientSize;
+			swapInterval = initialAppSettings.VSync switch
+			{
+				VSyncMode.On => 1,
+				VSyncMode.Adaptive => -1,
+				_ => 0,
+			};
+			clearColor = initialAppSettings.ClearColor;
+			escToExit = initialAppSettings.EscToExit;
+
+			InitializeSDL(title, clientSize.width, clientSize.height, initialAppSettings.WindowFlags | SDLWindowFlags.Hidden);
+			InitializeOpenGL(initialAppSettings.OpenGLVersion);
 			InitializeImGui();
+
+			if (initialAppSettings.Icon != null)
+			{
+				var surfacePtr = SDL.CreateRGBSurfaceWithFormat(0, (int)initialAppSettings.Icon.Width, (int)initialAppSettings.Icon.Height, 32, (uint)SDLPixelFormatEnum.Abgr8888);
+				fixed (void* pixelDataPtr = &initialAppSettings.Icon.PixelData[0])
+				{
+					// TODO: uhh is this safe?
+					surfacePtr->Pixels = pixelDataPtr;
+				}
+				SDL.SetWindowIcon(sdlWindow, surfacePtr);
+			}
 
 			isRunning = initSdlSuccess && initOpenGlSuccess && initGuiSuccess;
 
@@ -126,66 +151,61 @@ namespace FamiSharp
 			GC.SuppressFinalize(this);
 		}
 
-		private void Dispose(bool disposing)
+		protected virtual void Dispose(bool disposing)
 		{
-			if (disposed)
-				return;
-
-			if (disposing)
+			if (!disposed)
 			{
-				/* Dispose managed resources */
+				if (disposing)
+				{
+					/* Dispose managed resources */
+				}
 
-				AudioHandler.Dispose();
+				/* Free unmanaged resources */
+
+				if (initGuiSuccess)
+				{
+					ImGuiImplOpenGL3.Shutdown();
+					ImGuiImplSDL2.Shutdown();
+					ImGui.DestroyContext();
+				}
+
+				if (initOpenGlSuccess)
+				{
+					GL.Dispose();
+					SDL.GLDeleteContext(glContext);
+				}
+
+				if (initSdlSuccess)
+				{
+					SDL.DestroyWindow(sdlWindow);
+					SDL.Quit();
+				}
+
+				disposed = true;
 			}
-
-			/* Free unmanaged resources */
-
-			if (initGuiSuccess)
-			{
-				ImGuiImplOpenGL3.Shutdown();
-				ImGuiImplSDL2.Shutdown();
-				ImGui.DestroyContext();
-			}
-
-			if (initOpenGlSuccess)
-			{
-				GL.Dispose();
-				SDL.GLDeleteContext(glContext);
-			}
-
-			if (initSdlSuccess)
-			{
-				SDL.DestroyWindow(sdlWindow);
-				SDL.Quit();
-			}
-
-			disposed = true;
 
 			/* "It's okay, we're all going down anyway ..." */
 		}
 
-		private void InitializeSDL()
+		private void InitializeSDL(string title, int width, int height, SDLWindowFlags windowFlags)
 		{
 			if (SDL.Init(initFlags) != 0)
 				FatalError($"Failed to initialize SDL: {SDL.GetErrorS()}", ExitCode.SdlInitFailed);
 
 			SDL.SetHint(SDL.SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
-			sdlWindow = SDL.CreateWindow(Title, 32, 32, Width, Height, windowFlags);
+			sdlWindow = SDL.CreateWindow(title, 32, 32, width, height, (uint)windowFlags);
 			if (sdlWindow == null)
 				FatalError($"Failed to create SDL window: {SDL.GetErrorS()}", ExitCode.CreateWindowFailed);
 
 			sdlWindowId = SDL.GetWindowID(sdlWindow);
 
-			if (!AudioHandler.Initialize(2, 44100, 1024))
-				FatalError($"Failed to initialize audio handler: {SDL.GetErrorS()}", ExitCode.AudioHandlerInitFailed);
-
 			initSdlSuccess = true;
 		}
 
-		private void InitializeOpenGL(Version? version = default)
+		private void InitializeOpenGL(Version version)
 		{
-			if (version != default)
+			if (version.Major != 0)
 			{
 				SDL.GLSetAttribute(SDLGLattr.GlContextMajorVersion, version.Major);
 				SDL.GLSetAttribute(SDLGLattr.GlContextMinorVersion, version.Minor);
@@ -196,16 +216,15 @@ namespace FamiSharp
 				FatalError($"Failed to create OpenGL context: {SDL.GetErrorS()}", ExitCode.GlInitFailed);
 
 			gl = new(() => new(new BindingsContext(sdlWindow, glContext)));
-			GLInfo = new GLInfo(gl.Value);
 
-			if (version != default)
+			if (version.Major != 0)
 			{
-				if (GLInfo.ContextVersion != version)
-					FatalError($"Failed to set OpenGL context version: Requested {version}, got {GLInfo.ContextVersion}", ExitCode.GlVersionFailed);
+				if (GL.GetContextInfo().Version != version)
+					FatalError($"Failed to set OpenGL context version: Requested {version}, got {GL.GetContextInfo().Version}", ExitCode.GlVersionFailed);
 			}
 
-			GL.ClearColor(BackgroundColor.X, BackgroundColor.Y, BackgroundColor.Z, 1f);
-			GL.SwapInterval(SwapInterval);
+			GL.ClearColor(clearColor.X, clearColor.Y, clearColor.Z, 1f);
+			GL.SwapInterval(swapInterval);
 
 			initOpenGlSuccess = true;
 		}
@@ -261,7 +280,7 @@ namespace FamiSharp
 					break;
 
 				case (uint)SDLEventType.Keydown:
-					if (EscToExit && e.Key.Keysym.Sym == (int)SDLKeyCode.Escape) Exit();
+					if (escToExit && e.Key.Keysym.Sym == (int)SDLKeyCode.Escape) Exit();
 					OnKeyDown(new KeycodeEventArgs((SDLEventType)e.Key.Type, (SDLKeyCode)e.Key.Keysym.Sym, (SDLKeymod)e.Key.Keysym.Mod));
 					break;
 
@@ -323,35 +342,35 @@ namespace FamiSharp
 			Dispose();
 		}
 
-		public int ShowMessageBox(string title, string message, SDLMessageBoxFlags flags)
-		{
-			return SDL.ShowSimpleMessageBox((uint)flags, title, message, sdlWindow);
-		}
+		public int ShowMessageBox(string title, string message, SDLMessageBoxFlags flags) => SDL.ShowSimpleMessageBox((uint)flags, title, message, sdlWindow);
+
+		protected void FatalError(string error, int code) => FatalError(error, (ExitCode)code);
 
 		private void FatalError(string error, ExitCode code)
 		{
 			Console.WriteLine($"Fatal error! {error}");
 
-			ShowMessageBox("Fatal Error", $"{error}\n\nApplication will now exit; exit code {(int)code} ({code}).", SDLMessageBoxFlags.Error);
+			ShowMessageBox("Fatal Error", $"{error}\n\nApplication will now exit; exit code {(Enum.IsDefined(code) ? $"{(int)code} ({code})" : $"{(int)code}")}.", SDLMessageBoxFlags.Error);
 			SDL.Quit();
 
 			Environment.Exit((int)code);
 		}
 	}
 
-	public sealed class ProductInformation(string name, string ver, string desc, string cpr)
-	{
-		public string Name { get; } = name;
-		public string Version { get; } = ver;
-		public string Description { get; } = desc;
-		public string Copyright { get; } = cpr;
+	public enum VSyncMode { On, Off, Adaptive }
 
-		internal static ProductInformation GetProductInfo()
-		{
-			if (string.IsNullOrEmpty(Environment.ProcessPath)) return new("Application Name", "0.0.0.0", "No description.", "No copyright.");
-			var fileVersionInfo = FileVersionInfo.GetVersionInfo(Environment.ProcessPath);
-			return new ProductInformation(fileVersionInfo.ProductName!, fileVersionInfo.ProductVersion!, fileVersionInfo.Comments!, fileVersionInfo.LegalCopyright!);
-		}
+	public sealed class ApplicationSettings
+	{
+		public string Title { get; set; } = string.Empty;
+		public (int Width, int Height) ClientSize { get; set; } = (640, 480);
+		public RgbaFile? Icon { get; set; }
+		public SDLWindowFlags WindowFlags { get; set; } = SDLWindowFlags.Opengl;
+		public bool EscToExit { get; set; } = true;
+		public Version OpenGLVersion { get; set; } = new();
+		public VSyncMode VSync { get; set; } = VSyncMode.On;
+		public Vector3 ClearColor { get; set; } = Vector3.Zero;
+
+		public static ApplicationSettings Default => new();
 	}
 
 	internal unsafe sealed class BindingsContext(SDLWindow* window, SDLGLContext context) : IGLContext
@@ -375,34 +394,45 @@ namespace FamiSharp
 		}
 	}
 
-	public unsafe sealed class GLInfo
+	public static class GLExpansion
 	{
-		public string Renderer { get; private set; } = string.Empty;
-		public string Vendor { get; private set; } = string.Empty;
-		public string Version { get; private set; } = string.Empty;
-		public string ShadingLanguageVersion { get; private set; } = string.Empty;
-		public int NumExtensions { get; private set; }
-		public string[] Extensions { get; private set; } = [];
-		public Version ContextVersion { get; private set; }
+		static GLContextInfo? contextInfo;
+
+		public static GLContextInfo GetContextInfo(this GL gl)
+		{
+			contextInfo ??= new(gl);
+			return contextInfo;
+		}
+	}
+
+	public unsafe sealed class GLContextInfo
+	{
+		public string RendererString { get; private set; } = string.Empty;
+		public string VendorString { get; private set; } = string.Empty;
+		public string VersionString { get; private set; } = string.Empty;
+		public string ShadingLanguageVersionString { get; private set; } = string.Empty;
+		public int NumSupportedExtensions { get; private set; }
+		public string[] SupportedExtensions { get; private set; } = [];
+		public Version Version { get; private set; }
 		public int MaxTextureSize { get; private set; }
 
-		public GLInfo(GL gl)
+		public GLContextInfo(GL gl)
 		{
-			Renderer = GetString(gl, GLStringName.Renderer);
-			Vendor = GetString(gl, GLStringName.Vendor);
-			Version = GetString(gl, GLStringName.Version);
-			ShadingLanguageVersion = GetString(gl, GLStringName.ShadingLanguageVersion);
+			RendererString = GetString(gl, GLStringName.Renderer);
+			VendorString = GetString(gl, GLStringName.Vendor);
+			VersionString = GetString(gl, GLStringName.Version);
+			ShadingLanguageVersionString = GetString(gl, GLStringName.ShadingLanguageVersion);
 
 			var extensions = new List<string>();
-			NumExtensions = GetInteger(gl, GLGetPName.NumExtensions);
-			for (var i = 0; i < NumExtensions; i++)
+			NumSupportedExtensions = GetInteger(gl, GLGetPName.NumExtensions);
+			for (var i = 0; i < NumSupportedExtensions; i++)
 			{
 				var str = GetString(gl, GLStringName.Extensions, i);
 				if (!string.IsNullOrWhiteSpace(str)) extensions.Add(str);
 			}
-			Extensions = [.. extensions];
+			SupportedExtensions = [.. extensions];
 
-			ContextVersion = new(GetInteger(gl, GLGetPName.MajorVersion), GetInteger(gl, GLGetPName.MinorVersion));
+			Version = new(GetInteger(gl, GLGetPName.MajorVersion), GetInteger(gl, GLGetPName.MinorVersion));
 			MaxTextureSize = GetInteger(gl, GLGetPName.MaxTextureSize);
 		}
 
@@ -420,6 +450,72 @@ namespace FamiSharp
 			gl.GetIntegerv(pname, out int value);
 			return value;
 		}
+	}
+
+	public class Resources
+	{
+		private static Stream? GetEmbeddedResourceStream(string name)
+		{
+			var assembly = Assembly.GetEntryAssembly();
+			name = $"{assembly?.GetName().Name}.{name}";
+			return assembly?.GetManifestResourceStream(name);
+		}
+
+		public static RgbaFile? GetEmbeddedRgbaFile(string name)
+		{
+			using var stream = GetEmbeddedResourceStream(name);
+			if (stream == null) return null;
+			return new RgbaFile(stream);
+		}
+	}
+
+	public class RgbaFile
+	{
+		/* RGBA bitmap file format -- https://github.com/bzotto/rgba_bitmap
+		 * ".rgba is the dumbest possible image interchange format, now available for your programming pleasure."
+		 */
+
+		const string expectedMagic = "RGBA";
+
+		public string MagicNumber { get; protected set; }
+		public uint Width { get; protected set; }
+		public uint Height { get; protected set; }
+		public byte[] PixelData { get; protected set; }
+
+		public RgbaFile(string filename) : this(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) { }
+
+		public RgbaFile(Stream stream)
+		{
+			MagicNumber = ReadString(stream, 4);
+			Width = ReadUInt32(stream);
+			Height = ReadUInt32(stream);
+			PixelData = new byte[Width * Height * 4];
+			stream.ReadExactly(PixelData);
+		}
+
+		public RgbaFile(uint width, uint height, byte[] pixelData)
+		{
+			MagicNumber = expectedMagic;
+			Width = width;
+			Height = height;
+			PixelData = pixelData;
+		}
+
+		public void Save(string filename) => Save(new FileStream(filename, FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
+
+		public void Save(Stream stream)
+		{
+			WriteString(stream, MagicNumber);
+			WriteUInt32(stream, Width);
+			WriteUInt32(stream, Height);
+			stream.Write(PixelData);
+		}
+
+		private static string ReadString(Stream stream, int length) => new([.. Enumerable.Range(0, length).Select(_ => (char)stream.ReadByte())]);
+		private static uint ReadUInt32(Stream stream) => (uint)(((stream.ReadByte() & 0xFF) << 24) | ((stream.ReadByte() & 0xFF) << 16) | ((stream.ReadByte() & 0xFF) << 8) | ((stream.ReadByte() & 0xFF) << 0));
+
+		private static void WriteString(Stream stream, string str) => Array.ForEach(str.ToCharArray(), (x) => stream.WriteByte((byte)x));
+		private static void WriteUInt32(Stream stream, uint val) { stream.WriteByte((byte)((val >> 24) & 0xFF)); stream.WriteByte((byte)((val >> 16) & 0xFF)); stream.WriteByte((byte)((val >> 8) & 0xFF)); stream.WriteByte((byte)((val >> 0) & 0xFF)); }
 	}
 
 	public class DeltaTimeEventArgs(double delta) : EventArgs

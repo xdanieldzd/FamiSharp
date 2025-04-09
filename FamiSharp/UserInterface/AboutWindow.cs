@@ -23,7 +23,7 @@ namespace FamiSharp.UserInterface
 
 		protected override void DrawWindow(object? userData)
 		{
-			if (userData is not (ProductInformation productInfo, GLInfo glInfo)) return;
+			if (userData is not (ProductInformation productInfo, GLContextInfo glContextInfo)) return;
 
 			var io = ImGui.GetIO();
 
@@ -46,7 +46,6 @@ namespace FamiSharp.UserInterface
 			{
 				if (debugInfo.Count == 0)
 				{
-					//debugInfo.Add("THIS IS A LOOOOOOOONG LINE!!! THIS IS A LOOOOOOOONG LINE!!! THIS IS A LOOOOOOOONG LINE!!! THIS IS A LOOOOOOOONG LINE!!! THIS IS A LOOOOOOOONG LINE!!!");
 					debugInfo.Add("Application information:");
 					debugInfo.Add($"- Process Name:           {currentProcess.ProcessName}");
 					debugInfo.Add($"- Module Name:            {currentProcess.MainModule?.ModuleName}");
@@ -67,14 +66,14 @@ namespace FamiSharp.UserInterface
 					debugInfo.Add(Environment.NewLine);
 
 					debugInfo.Add("OpenGL information:");
-					debugInfo.Add($"- Renderer:               {glInfo.Renderer}");
-					debugInfo.Add($"- Vendor:                 {glInfo.Vendor}");
-					debugInfo.Add($"- Version:                {glInfo.Version}");
-					debugInfo.Add($"- ShadingLanguageVersion: {glInfo.ShadingLanguageVersion}");
-					debugInfo.Add($"- Major/MinorVersion:     {glInfo.ContextVersion}");
-					debugInfo.Add($"- MaxTextureSize:         {glInfo.MaxTextureSize}");
+					debugInfo.Add($"- Renderer:               {glContextInfo.RendererString}");
+					debugInfo.Add($"- Vendor:                 {glContextInfo.VendorString}");
+					debugInfo.Add($"- Version:                {glContextInfo.VersionString}");
+					debugInfo.Add($"- ShadingLanguageVersion: {glContextInfo.ShadingLanguageVersionString}");
+					debugInfo.Add($"- Major/MinorVersion:     {glContextInfo.Version}");
+					debugInfo.Add($"- MaxTextureSize:         {glContextInfo.MaxTextureSize}");
 					debugInfo.Add("- Supported extensions:");
-					foreach (var extension in glInfo.Extensions) debugInfo.Add($" - {extension}");
+					foreach (var extension in glContextInfo.SupportedExtensions) debugInfo.Add($" - {extension}");
 				}
 
 				if (ImGui.BeginChild("##debuginfo",

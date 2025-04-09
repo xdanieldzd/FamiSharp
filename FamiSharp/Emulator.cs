@@ -2,20 +2,24 @@
 using FamiSharp.Emulation.Cartridges;
 using FamiSharp.UserInterface;
 using FamiSharp.Utilities;
+using Hexa.NET.SDL2;
 using NativeFileDialogNET;
 
 namespace FamiSharp
 {
-	public partial class Emulator() : Application(new(3, 3))
+	public partial class Emulator(ApplicationSettings appSettings) : Application(appSettings)
 	{
+		const string configurationFilename = "Config.json";
 		const string saveDataDirectoryName = "Saves";
 
-		public override string Title => $"{ProductInformation.Name} v{ProductInformation.Version}";
-		public override int Width => 1280;
-		public override int Height => 720;
+		static readonly ProductInformation productInformation = ProductInformation.GetProductInfo();
+		static readonly string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), productInformation.Name);
+		static readonly string configurationPath = Path.Combine(dataDirectory, configurationFilename);
 
 		Configuration configuration = new();
 		string saveDataPath = string.Empty;
+
+		readonly AudioHandler audioHandler = new();
 
 		NesSystem? nes;
 		OpenGLTexture? displayTexture;
@@ -27,17 +31,43 @@ namespace FamiSharp
 		double frameTimeElapsed, framesPerSecond;
 		readonly AverageFramerate averageFps = new(250);
 
+		bool disposed;
+
+		protected override void Dispose(bool disposing)
+		{
+			if (!disposed)
+			{
+				if (disposing)
+				{
+					/* Dispose managed resources */
+
+					audioHandler.Dispose();
+				}
+
+				/* Free unmanaged resources */
+
+				disposed = true;
+			}
+
+			base.Dispose(disposing);
+		}
+
 		public override void OnLoad()
 		{
 			try
 			{
-				configuration = Configuration.LoadFromFile(ConfigurationPath);
-				Directory.CreateDirectory(saveDataPath = Path.Combine(DataDirectory, saveDataDirectoryName));
+				Title = $"{productInformation.Name} v{productInformation.Version}";
 
-				nes = new(AudioHandler.SampleRate);
+				if (!audioHandler.Initialize(2, 44100, 1024))
+					FatalError($"Failed to initialize audio handler: {SDL.GetErrorS()}", -128);
+
+				configuration = Configuration.LoadFromFile(configurationPath);
+				Directory.CreateDirectory(saveDataPath = Path.Combine(dataDirectory, saveDataDirectoryName));
+
+				nes = new(audioHandler.SampleRate);
 				nes.Ppu.LoadPalette(File.ReadAllBytes(@"Assets\2C02G_wiki.pal")); /* https://www.nesdev.org/w/index.php?title=File:2C02G_wiki.pal&oldid=22304 */
 				nes.Ppu.TransferFramebuffer += (s, e) => displayTexture?.Update(e.Data);
-				nes.Apu.TransferSamples += (s, e) => AudioHandler.Output(e.Samples);
+				nes.Apu.TransferSamples += (s, e) => audioHandler.Output(e.Samples);
 				nes.RequestInput += (s, e) =>
 				{
 					if (!displayWindow.IsFocused) return;
@@ -140,7 +170,7 @@ namespace FamiSharp
 			StatusBar.Draw(new StatusBarItem?[] { statusStatusBarItem, fpsStatusBarItem });
 
 			displayWindow.Draw(displayTexture);
-			aboutWindow.Draw((ProductInformation, GLInfo));
+			aboutWindow.Draw((productInformation, GL.GetContextInfo()));
 
 			cpuStatusWindow.Draw(nes);
 			cpuDisassemblyWindow.Draw(nes);
@@ -155,7 +185,7 @@ namespace FamiSharp
 			SaveCartridgeRam();
 
 			configuration.DisplaySize = displayWindow.WindowScale;
-			configuration.SaveToFile(ConfigurationPath);
+			configuration.SaveToFile(configurationPath);
 		}
 
 		private void ShowOpenRomDialog()
@@ -193,7 +223,7 @@ namespace FamiSharp
 					statusStatusBarItem.Label = $"Emulation started, running '{cartridgeFilename}'";
 
 				configuration.LastRomLoaded = cartridgeFilename;
-				configuration.SaveToFile(ConfigurationPath);
+				configuration.SaveToFile(configurationPath);
 
 				isSystemRunning = true;
 			}

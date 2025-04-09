@@ -28,22 +28,22 @@ namespace FamiSharp.Utilities
 
 		private void Dispose(bool disposing)
 		{
-			if (disposed)
-				return;
-
-			if (disposing)
+			if (!disposed)
 			{
-				/* Dispose managed resources */
+				if (disposing)
+				{
+					/* Dispose managed resources */
+				}
+
+				/* Free unmanaged resources */
+
+				if (initSdlAudioSuccess)
+				{
+					SDL.CloseAudioDevice(sdlAudioDeviceId);
+				}
+
+				disposed = true;
 			}
-
-			/* Free unmanaged resources */
-
-			if (initSdlAudioSuccess)
-			{
-				SDL.CloseAudioDevice(sdlAudioDeviceId);
-			}
-
-			disposed = true;
 		}
 
 		public bool Initialize(byte channels, int freq, ushort samples)
