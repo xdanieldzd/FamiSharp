@@ -19,7 +19,7 @@ namespace FamiSharp.UserInterface
 		{
 			if (userData is not OpenGLTexture texture) return;
 
-			var textureSize = texture.Size * windowScale;
+			var textureSize = new Vector2(texture.Size.Width, texture.Size.Height) * windowScale;
 
 			var borderSize = new Vector2(ImGui.GetStyle().ChildBorderSize);
 

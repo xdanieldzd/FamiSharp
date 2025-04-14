@@ -2,7 +2,7 @@
 
 namespace FamiSharp.Utilities
 {
-	public unsafe class AudioHandler : IDisposable
+	public unsafe class AudioHandler : BaseDisposable
 	{
 		public byte Channels => audioSpec.Channels;
 		public int SampleRate => audioSpec.Freq;
@@ -13,38 +13,6 @@ namespace FamiSharp.Utilities
 		uint sdlAudioDeviceId;
 
 		bool initSdlAudioSuccess;
-		bool disposed;
-
-		~AudioHandler()
-		{
-			Dispose(false);
-		}
-
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-
-		private void Dispose(bool disposing)
-		{
-			if (!disposed)
-			{
-				if (disposing)
-				{
-					/* Dispose managed resources */
-				}
-
-				/* Free unmanaged resources */
-
-				if (initSdlAudioSuccess)
-				{
-					SDL.CloseAudioDevice(sdlAudioDeviceId);
-				}
-
-				disposed = true;
-			}
-		}
 
 		public bool Initialize(byte channels, int freq, ushort samples)
 		{
@@ -81,6 +49,14 @@ namespace FamiSharp.Utilities
 			fixed (void* ptr = &samples[0])
 			{
 				SDL.QueueAudio(sdlAudioDeviceId, ptr, (uint)(samples.Length * sizeof(short)));
+			}
+		}
+
+		protected override void DisposeUnmanaged()
+		{
+			if (initSdlAudioSuccess)
+			{
+				SDL.CloseAudioDevice(sdlAudioDeviceId);
 			}
 		}
 	}

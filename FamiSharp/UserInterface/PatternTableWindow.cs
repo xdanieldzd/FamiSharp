@@ -93,7 +93,7 @@ namespace FamiSharp.UserInterface
 					ImGui.TableSetColumnIndex(i);
 
 					var imagePos = ImGui.GetCursorScreenPos();
-					ImGui.Image(patternTableTextures[i].Handle, patternTableTextures[i].Size * zoom);
+					ImGui.Image(patternTableTextures[i].Handle, new Vector2(patternTableTextures[i].Size.Width, patternTableTextures[i].Size.Height) * zoom);
 
 					/* Prevent window from being dragged around if inside pattern table view */
 					ImGui.SetCursorScreenPos(imagePos);

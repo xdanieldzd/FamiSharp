@@ -12,7 +12,7 @@ using SDLWindow = Hexa.NET.SDL2.SDLWindow;
 
 namespace FamiSharp
 {
-	public unsafe class Application : IDisposable
+	public unsafe class Application : BaseDisposable
 	{
 		/* "Hello, brand new world ..." */
 
@@ -87,14 +87,13 @@ namespace FamiSharp
 
 		SDLWindow* sdlWindow;
 		uint sdlWindowId;
-		SDLSurface iconSdlSurface;
+		readonly SDLSurface* iconSdlSurface;
 		SDLGLContext glContext;
 		ImGuiContextPtr guiContext;
 		ImGuiIOPtr guiIo;
 		ImGuiStylePtr guiStyle;
 
 		bool initSdlSuccess, initOpenGlSuccess, initGuiSuccess, isRunning;
-		bool disposed;
 
 		public Application(ApplicationSettings applicationSettings)
 		{
@@ -117,13 +116,10 @@ namespace FamiSharp
 
 			if (initialAppSettings.Icon != null)
 			{
-				var surfacePtr = SDL.CreateRGBSurfaceWithFormat(0, (int)initialAppSettings.Icon.Width, (int)initialAppSettings.Icon.Height, 32, (uint)SDLPixelFormatEnum.Abgr8888);
+				iconSdlSurface = SDL.CreateRGBSurfaceWithFormat(0, (int)initialAppSettings.Icon.Width, (int)initialAppSettings.Icon.Height, 32, (uint)SDLPixelFormatEnum.Abgr8888);
 				fixed (void* pixelDataPtr = &initialAppSettings.Icon.PixelData[0])
-				{
-					// TODO: uhh is this safe?
-					surfacePtr->Pixels = pixelDataPtr;
-				}
-				SDL.SetWindowIcon(sdlWindow, surfacePtr);
+					iconSdlSurface->Pixels = pixelDataPtr;
+				SDL.SetWindowIcon(sdlWindow, iconSdlSurface);
 			}
 
 			isRunning = initSdlSuccess && initOpenGlSuccess && initGuiSuccess;
@@ -138,53 +134,6 @@ namespace FamiSharp
 
 			SDL.SetWindowPosition(sdlWindow, (int)SDL.SDL_WINDOWPOS_CENTERED_MASK, (int)SDL.SDL_WINDOWPOS_CENTERED_MASK);
 			SDL.ShowWindow(sdlWindow);
-		}
-
-		~Application()
-		{
-			Dispose(false);
-		}
-
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-
-		protected virtual void Dispose(bool disposing)
-		{
-			if (!disposed)
-			{
-				if (disposing)
-				{
-					/* Dispose managed resources */
-				}
-
-				/* Free unmanaged resources */
-
-				if (initGuiSuccess)
-				{
-					ImGuiImplOpenGL3.Shutdown();
-					ImGuiImplSDL2.Shutdown();
-					ImGui.DestroyContext();
-				}
-
-				if (initOpenGlSuccess)
-				{
-					GL.Dispose();
-					SDL.GLDeleteContext(glContext);
-				}
-
-				if (initSdlSuccess)
-				{
-					SDL.DestroyWindow(sdlWindow);
-					SDL.Quit();
-				}
-
-				disposed = true;
-			}
-
-			/* "It's okay, we're all going down anyway ..." */
 		}
 
 		private void InitializeSDL(string title, int width, int height, SDLWindowFlags windowFlags)
@@ -354,6 +303,30 @@ namespace FamiSharp
 			SDL.Quit();
 
 			Environment.Exit((int)code);
+		}
+
+		protected override void DisposeUnmanaged()
+		{
+			if (initGuiSuccess)
+			{
+				ImGuiImplOpenGL3.Shutdown();
+				ImGuiImplSDL2.Shutdown();
+				ImGui.DestroyContext();
+			}
+
+			if (initOpenGlSuccess)
+			{
+				GL.Dispose();
+				SDL.GLDeleteContext(glContext);
+			}
+
+			if (initSdlSuccess)
+			{
+				SDL.DestroyWindow(sdlWindow);
+				SDL.Quit();
+			}
+
+			/* "It's okay, we're all going down anyway ..." */
 		}
 	}
 
@@ -528,5 +501,35 @@ namespace FamiSharp
 		public SDLEventType EventType { get; set; } = evtType;
 		public SDLKeyCode Keycode { get; set; } = keycode;
 		public SDLKeymod Modifier { get; set; } = modifier;
+	}
+
+	public abstract class BaseDisposable : IDisposable
+	{
+		bool isDisposed;
+
+		~BaseDisposable()
+		{
+			Dispose(false);
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void DisposeManaged() { }
+		protected virtual void DisposeUnmanaged() { }
+
+		protected void Dispose(bool disposing)
+		{
+			if (!isDisposed)
+			{
+				if (disposing) DisposeManaged();
+				DisposeUnmanaged();
+
+				isDisposed = true;
+			}
+		}
 	}
 }

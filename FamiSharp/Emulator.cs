@@ -31,27 +31,6 @@ namespace FamiSharp
 		double frameTimeElapsed, framesPerSecond;
 		readonly AverageFramerate averageFps = new(250);
 
-		bool disposed;
-
-		protected override void Dispose(bool disposing)
-		{
-			if (!disposed)
-			{
-				if (disposing)
-				{
-					/* Dispose managed resources */
-
-					audioHandler.Dispose();
-				}
-
-				/* Free unmanaged resources */
-
-				disposed = true;
-			}
-
-			base.Dispose(disposing);
-		}
-
 		public override void OnLoad()
 		{
 			try
@@ -100,7 +79,7 @@ namespace FamiSharp
 			}
 			catch (Exception e)
 			{
-				ShowMessageBox("Error", $"An error occured while starting the emulator:\n\n{e.Message}", Hexa.NET.SDL2.SDLMessageBoxFlags.Error);
+				ShowMessageBox("Error", $"An error occured while starting the emulator:\n\n{e.Message}", SDLMessageBoxFlags.Error);
 				Exit();
 			}
 		}
@@ -121,7 +100,7 @@ namespace FamiSharp
 
 		private void HandleControllerInput(KeycodeEventArgs e, int index, ControllerConfiguration config)
 		{
-			var value = e.EventType == Hexa.NET.SDL2.SDLEventType.Keydown;
+			var value = e.EventType == SDLEventType.Keydown;
 			switch (e.Keycode)
 			{
 				case var key when key == config.Right: buttonsDown[index, 0] = value; break;
@@ -229,7 +208,7 @@ namespace FamiSharp
 			}
 			catch (Exception e)
 			{
-				ShowMessageBox("Error", e.Message, Hexa.NET.SDL2.SDLMessageBoxFlags.Error);
+				ShowMessageBox("Error", e.Message, SDLMessageBoxFlags.Error);
 			}
 		}
 
@@ -277,6 +256,14 @@ namespace FamiSharp
 				var savePath = Path.Combine(saveDataPath, cartSaveFilename);
 				File.WriteAllBytes(savePath, prgRam);
 			}
+		}
+
+		protected override void DisposeManaged()
+		{
+			displayTexture?.Dispose();
+			audioHandler.Dispose();
+
+			base.DisposeManaged();
 		}
 	}
 }

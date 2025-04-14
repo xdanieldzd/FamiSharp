@@ -1,24 +1,24 @@
 ﻿using Hexa.NET.OpenGL;
 using System.Runtime.InteropServices;
-using System.Numerics;
 
 namespace FamiSharp
 {
-	public sealed class OpenGLTexture : IDisposable
+	public sealed class OpenGLTexture : BaseDisposable
 	{
 		const GLTextureMinFilter defaultMinFilter = GLTextureMinFilter.Nearest;
 		const GLTextureMagFilter defaultMagFilter = GLTextureMagFilter.Nearest;
 		const GLTextureWrapMode defaultWrapModeS = GLTextureWrapMode.Repeat;
 		const GLTextureWrapMode defaultWrapModeT = GLTextureWrapMode.Repeat;
 
+		const GLInternalFormat defaultInternalFormat = GLInternalFormat.Rgba8;
+		const GLPixelFormat defaultPixelFormat = GLPixelFormat.Rgba;
+		const GLPixelType defaultPixelType = GLPixelType.UnsignedByte;
+
 		readonly GL gl;
+		readonly (byte r, byte g, byte b, byte a) initialColors = (0, 0, 0, 255);
 
 		public uint Handle { get; }
-		public Vector2 Size { get; } = Vector2.Zero;
-
-		(byte r, byte g, byte b, byte a) initialColors = (0, 0, 0, 255);
-
-		bool disposed;
+		public (int Width, int Height) Size { get; }
 
 		public OpenGLTexture(GL gl, int width, int height) : this(gl, width, height, 0, 0, 0, 255) { }
 
@@ -26,34 +26,9 @@ namespace FamiSharp
 		{
 			this.gl = gl;
 
-			(Handle, Size) = (gl.GenTexture(), new(width, height));
+			(Handle, Size) = (gl.GenTexture(), (width, height));
 
 			Initialize(Fill(initialColors = (r, g, b, a)));
-		}
-
-		~OpenGLTexture()
-		{
-			Dispose(false);
-		}
-
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-
-		private void Dispose(bool disposing)
-		{
-			if (disposed)
-				return;
-
-			if (disposing)
-			{
-				if (gl.IsTexture(Handle))
-					gl.DeleteTexture(Handle);
-			}
-
-			disposed = true;
 		}
 
 		private void ChangeTextureParams(Action action)
@@ -70,7 +45,7 @@ namespace FamiSharp
 			{
 				var handle = GCHandle.Alloc(data, GCHandleType.Pinned);
 				var pointer = handle.AddrOfPinnedObject();
-				gl.TexImage2D(GLTextureTarget.Texture2D, 0, GLInternalFormat.Rgba8, (int)Size.X, (int)Size.Y, 0, GLPixelFormat.Rgba, GLPixelType.UnsignedByte, pointer);
+				gl.TexImage2D(GLTextureTarget.Texture2D, 0, defaultInternalFormat, Size.Width, Size.Height, 0, defaultPixelFormat, defaultPixelType, pointer);
 				gl.TexParameteri(GLTextureTarget.Texture2D, GLTextureParameterName.MinFilter, (int)defaultMinFilter);
 				gl.TexParameteri(GLTextureTarget.Texture2D, GLTextureParameterName.MagFilter, (int)defaultMagFilter);
 				gl.TexParameteri(GLTextureTarget.Texture2D, GLTextureParameterName.WrapS, (int)defaultWrapModeS);
@@ -97,7 +72,7 @@ namespace FamiSharp
 			});
 		}
 
-		private byte[] Fill((byte r, byte g, byte b, byte a) color) => [.. Enumerable.Repeat(color, (int)(Size.X * Size.Y)).SelectMany(c => new[] { c.r, c.g, c.b, c.a })];
+		private byte[] Fill((byte r, byte g, byte b, byte a) color) => [.. Enumerable.Repeat(color, Size.Width * Size.Height).SelectMany(c => new[] { c.r, c.g, c.b, c.a })];
 
 		public void Update(byte[] data)
 		{
@@ -105,11 +80,17 @@ namespace FamiSharp
 			{
 				var handle = GCHandle.Alloc(data, GCHandleType.Pinned);
 				var pointer = handle.AddrOfPinnedObject();
-				gl.TexSubImage2D(GLTextureTarget.Texture2D, 0, 0, 0, (int)Size.X, (int)Size.Y, GLPixelFormat.Rgba, GLPixelType.UnsignedByte, pointer);
+				gl.TexSubImage2D(GLTextureTarget.Texture2D, 0, 0, 0, Size.Width, Size.Height, defaultPixelFormat, defaultPixelType, pointer);
 				handle.Free();
 			});
 		}
 
 		public void Clear() => Update(Fill(initialColors));
+
+		protected override void DisposeUnmanaged()
+		{
+			if (gl.IsTexture(Handle))
+				gl.DeleteTexture(Handle);
+		}
 	}
 }
