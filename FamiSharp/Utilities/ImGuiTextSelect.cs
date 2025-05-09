@@ -123,7 +123,7 @@ namespace FamiSharp.Utilities
 						}
 					}
 				}
-				else if (ImGuiP.IsKeyDown(ImGuiKey.ModShift))
+				else if (ImGui.IsKeyDown(ImGuiKey.ModShift))
 				{
 					if (selectStart.IsInvalid()) (selectStart.X, selectStart.Y) = (0, 0);
 					(selectEnd.X, selectEnd.Y) = (x, y);
@@ -159,8 +159,8 @@ namespace FamiSharp.Utilities
 			var scrollXDelta = GetScrollDelta(mousePos.X, windowMin.X, windowMax.X);
 			var scrollYDelta = GetScrollDelta(mousePos.Y, windowMin.Y, windowMax.Y);
 
-			if (Math.Abs(scrollXDelta) > 0.0f) ImGuiP.SetScrollX(ImGui.GetScrollX() + scrollXDelta);
-			if (Math.Abs(scrollYDelta) > 0.0f) ImGuiP.SetScrollY(ImGui.GetScrollY() + scrollYDelta);
+			if (Math.Abs(scrollXDelta) > 0.0f) ImGui.SetScrollX(ImGui.GetScrollX() + scrollXDelta);
+			if (Math.Abs(scrollYDelta) > 0.0f) ImGui.SetScrollY(ImGui.GetScrollY() + scrollYDelta);
 		}
 
 		private void DrawSelection(Vector2 cursorPosStart)
@@ -243,7 +243,7 @@ namespace FamiSharp.Utilities
 					ImGui.SetMouseCursor(ImGuiMouseCursor.TextInput);
 			}
 
-			if (ImGuiP.IsMouseDown(ImGuiMouseButton.Left))
+			if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
 			{
 				if (hovered) HandleMouseDown(cursorPosStart);
 				else HandleScrolling();
@@ -251,8 +251,8 @@ namespace FamiSharp.Utilities
 
 			DrawSelection(cursorPosStart);
 
-			if (ImGuiP.Shortcut((int)(ImGuiKey.ModCtrl | ImGuiKey.A))) SelectAll();
-			else if (ImGuiP.Shortcut((int)(ImGuiKey.ModCtrl | ImGuiKey.C))) Copy();
+			if (ImGui.Shortcut((int)(ImGuiKey.ModCtrl | ImGuiKey.A))) SelectAll();
+			else if (ImGui.Shortcut((int)(ImGuiKey.ModCtrl | ImGuiKey.C))) Copy();
 		}
 
 		internal sealed class CursorPos(int x, int y)

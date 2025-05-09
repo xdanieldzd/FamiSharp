@@ -108,7 +108,7 @@ namespace FamiSharp.UserInterface
 							if (IsFocused && isHovering)
 							{
 								hoveredTile = (i, x, y);
-								if (ImGuiP.IsMouseDown(ImGuiMouseButton.Left))
+								if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
 									selectedTile = hoveredTile;
 							}
 

@@ -307,9 +307,6 @@ namespace FamiSharp
 
 		protected override void DisposeUnmanaged()
 		{
-			if (iconSdlSurface != null)
-				SDL.FreeSurface(iconSdlSurface);
-
 			if (initGuiSuccess)
 			{
 				ImGuiImplOpenGL3.Shutdown();
