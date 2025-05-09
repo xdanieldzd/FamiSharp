@@ -76,6 +76,7 @@ namespace FamiSharp.UserInterface
 					foreach (var extension in glContextInfo.SupportedExtensions) debugInfo.Add($" - {extension}");
 				}
 
+				ImGui.SetNextWindowSize(new(0f, 150f));
 				if (ImGui.BeginChild("##debuginfo",
 					ImGuiChildFlags.ResizeY | ImGuiChildFlags.FrameStyle,
 					ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove))
